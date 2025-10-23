@@ -1,0 +1,3 @@
+All new React components must use Tailwind CSS for styling.
+The primary color is blue-600.
+Do not use Material UI components unless displaying large grid data.

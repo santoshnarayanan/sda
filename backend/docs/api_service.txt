@@ -1,0 +1,3 @@
+The internal API Service runs on port 8080.
+Authentication requires an 'X-Internal-Key' header set to 'super-secret-key-prod'.
+The main endpoint for fetching user data is /user/details/{id}.

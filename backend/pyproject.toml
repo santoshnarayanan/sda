@@ -13,6 +13,10 @@ dependencies = [
     "python-dotenv",
     "psycopg2-binary",
     "sqlmodel", # Optional, but good practice to include it here
+
+    # ADD THESE NEW DEPENDENCIES FOR PHASE 2
+    "langchain-community",
+    "langchain-openai",
 ]
 
 # This section is needed to tell Python how to build the project
