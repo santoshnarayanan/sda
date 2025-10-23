@@ -12,10 +12,21 @@ This document details the **architectural decisions** and **implementation speci
 
 The SDA uses a **Microservice-Oriented Architecture**, separating the API layer (FastAPI) from the persistence layers (PostgreSQL and Qdrant).
 
-### 2.1 Data Flow (RAG Pipeline)
+### 🏗️ High-Level System Architecture
 
-The `/api/v1/generate` endpoint follows this workflow:
+The following diagram shows how the frontend, backend, databases, and AI model interact:
 
+![System Architecture](./images/Archiecture.png)
+
+---
+
+### 🔄 RAG Data Flow Sequence
+
+This diagram illustrates the sequential flow of information through the RAG pipeline — from user prompt submission to response generation and logging.
+
+![RAG Sequence Flow](./images/Sequence.png)
+
+**Workflow:**  
 1. **Request:** React frontend sends `prompt_text` to FastAPI.  
 2. **Retrieval:** `ai_service.py` queries Qdrant via LangChain Retriever.  
 3. **Context Injection:** Retrieved document chunks and `SYSTEM_PROMPT` are combined into a final payload.  
@@ -23,51 +34,69 @@ The `/api/v1/generate` endpoint follows this workflow:
 5. **Audit:** The response is logged into PostgreSQL.  
 6. **Response:** JSON output is returned to the frontend UI.
 
-### 2.2 Persistence Layer Strategy
-
-| Database | Role | Data | Justification |
-|-----------|------|------|---------------|
-| **PostgreSQL** | Structured / Audit | User details, request history | Provides ACID compliance and auditing |
-| **Qdrant** | Vector Store | Document embeddings, metadata | Enables low-latency semantic retrieval for RAG |
-
 ---
 
 ## 3. Backend Implementation Details
 
-### 3.1 FastAPI & Data Modeling (`main.py`, `models.py`)
+### 🧩 Backend Component Architecture
 
-- **API Contracts:** Defined using Pydantic models (`CodeGenerationRequest`, `GenerationResponse`).  
-- **Endpoints:**  
-  - `POST /api/v1/generate` — Handles generation and logs output to DB.  
-  - `GET /api/v1/history` — Fetches historical data using `RealDictCursor`.  
-- **CORS:** Configured for frontend at `http://localhost:5173`.
+The backend is modularly designed with FastAPI serving as the API layer, LangChain handling LLM orchestration, and Qdrant/PostgreSQL as the data stores.
 
-### 3.2 LangChain RAG Core (`ai_service.py`)
+![Backend Architecture](./images/Backend.png)
 
-Key implementation details:
-
-- **Environment Loading:** `.env` variables loaded early via `load_dotenv()` for `OPENAI_API_KEY`, `QDRANT_URL`.  
-- **Embedding Model:** `SentenceTransformerEmbeddings` (`all-MiniLM-L6-v2`, 384 dims).  
-- **Qdrant Mapping (Fix):** Uses `content_payload_key="text"` to ensure retriever references correct payload.  
-- **LLM Invocation:** Uses LangChain Expression Language (LCEL) to invoke the chain:  
-
-```python
-ai_message = chain.invoke({"input": prompt})
-```
+**Modules:**  
+- `main.py`: FastAPI routes and database connectivity  
+- `ai_service.py`: Core RAG logic and LangChain orchestration  
+- `models.py`: Pydantic schema definitions  
+- `ingest.py`: Handles RAG document ingestion and embedding creation  
 
 ---
 
-## 4. Frontend Design & State Management
+## 4. Frontend Design & API Interaction
 
-- **Frameworks:** React + TypeScript  
-- **State Management:** Redux Toolkit manages input prompt, output, and history state.  
-- **Data Grid:** `HistoryTable.tsx` uses **MUI DataGrid** for high-performance history view.  
-- **API Communication:** Axios connects to backend, mapping responses to TypeScript interfaces.
+The frontend, built with React and Redux, manages global state and user interactions while communicating asynchronously with the FastAPI backend.
+
+![Frontend to API Flow](./images/Frontend-API.png)
+
+**Components Overview:**  
+- `GenerationArea.tsx`: Accepts user prompts and triggers API requests.  
+- `OutputDisplay.tsx`: Displays generated AI responses.  
+- `HistoryTable.tsx`: Shows previous interactions using MUI DataGrid.  
+- `generationSlice.ts`: Centralized Redux state management.  
 
 ---
 
-## 5. Next Steps (Roadmap)
+## 5. Database Schema
+
+The database stores structured user data, request logs, and configurations in PostgreSQL, while Qdrant handles vectorized document embeddings.
+
+![Database ER Diagram](./images/ER.png)
+
+**Entities:**  
+- `users`: Stores user accounts and credentials.  
+- `request_history`: Logs user prompts, responses, timestamps.  
+- `user_settings`: Holds user preferences (model, language, etc.).  
+- `user_snippets`: Stores saved code snippets.  
+
+---
+
+## 6. Key Implementation Notes
+
+- **Environment Configuration:** `.env` file is loaded early using `load_dotenv()` to ensure all credentials are set.  
+- **Embedding Model:** Uses `all-MiniLM-L6-v2` for balanced performance and accuracy.  
+- **LangChain Expression Language (LCEL):** Used to efficiently chain the retriever and LLM.  
+- **CORS Setup:** Configured in FastAPI to allow frontend access from `http://localhost:5173`.  
+
+---
+
+## 7. Roadmap
 
 - **v1.0.0 Release:** Tag Phase 2 as stable.  
 - **Phase 3:** Add user authentication & code refactoring endpoint.  
-- **Phase 4:** Implement file upload + codebase indexing in Qdrant for deep project analysis.
+- **Phase 4:** Implement file upload + codebase indexing in Qdrant for deep project analysis.  
+
+---
+
+**📎 Note:**  
+All architecture diagrams are stored in the `/images` directory (relative to the project root) and referenced with relative paths.  
+Ensure that this folder is committed to your Git repository for proper rendering on GitHub or any Markdown viewer.
