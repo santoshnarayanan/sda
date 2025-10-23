@@ -1,0 +1,2 @@
+# Development dependencies for running and testing the application
+uvicorn[standard]

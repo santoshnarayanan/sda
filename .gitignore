@@ -1,0 +1,34 @@
+# -------------------------
+# Python (Backend) Exclusions
+# -------------------------
+# Byte-compiled files
+__pycache__/
+*.pyc
+
+# Distribution/packaging artifacts
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# PyCharm/IDE files
+.idea/
+
+# -------------------------
+# JavaScript (Frontend) Exclusions
+# -------------------------
+# Dependency directory
+/frontend/node_modules
+
+# Build artifacts (Vite output)
+/frontend/dist
+
+# Vite cache directory
+/frontend/.vite
+
+# Package lock files (optional, but good practice if only using one lock file)
+/frontend/package-lock.json
