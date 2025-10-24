@@ -45,17 +45,19 @@ It demonstrates a robust, decoupled architecture leveraging the power of **Retri
 sda/
 ├── .gitignore
 ├── README.md
+├── LICENSE.md
+├── NOTICE.md
 ├── TECHNICAL_DESIGN.md
 ├── backend/
 │   ├── app/
-│   │   ├── ai_service.py    # LangChain/RAG core logic
-│   │   ├── main.py          # FastAPI app, DB connection, CORS
-│   │   └── models.py        # Pydantic schemas
-│   ├── docs/                # Custom documentation files for RAG
-│   └── ingest.py            # Script to run RAG data ingestion
+│   │   ├── ai_service.py
+│   │   ├── main.py
+│   │   └── models.py
+│   ├── docs/
+│   └── ingest.py
 └── frontend/
-    ├── src/                 # React source files
-    └── package.json         # Node dependencies
+    ├── src/
+    └── package.json
 ```
 
 ---
@@ -118,3 +120,38 @@ npm run dev
 ```
 
 Access the app at: [http://localhost:5173](http://localhost:5173)
+
+---
+
+## 📜 License
+
+This project is licensed under the [MIT License](./LICENSE.md).
+
+---
+
+## 🙏 Acknowledgements
+
+This project uses the following open-source libraries and frameworks:
+
+- [LangChain](https://github.com/langchain-ai/langchain) — MIT License  
+- [Qdrant](https://github.com/qdrant/qdrant) — Apache 2.0 License  
+- [React](https://github.com/facebook/react) — MIT License  
+- [Node.js](https://github.com/nodejs/node) — MIT License  
+- [FastAPI](https://github.com/tiangolo/fastapi) — MIT License  
+- [PostgreSQL](https://www.postgresql.org/) — PostgreSQL License  
+- [Sentence Transformers](https://github.com/UKPLab/sentence-transformers) — Apache 2.0 License  
+
+We gratefully acknowledge the work of these communities.
+
+> ℹ️ **Note on licenses:**  
+> - MIT (used by LangChain, React, Node.js, FastAPI) is permissive — you can reuse the code freely as long as you credit the author.  
+> - Apache 2.0 (used by Qdrant, Sentence Transformers) provides similar freedoms with added patent protection.  
+> - PostgreSQL License allows unrestricted use and modification for both open and closed source projects.
+
+---
+
+## 📌 Notice
+
+Please see the [NOTICE.md](./NOTICE.md) file for attribution and detailed acknowledgements.
+
+**Copyright © 2025 Santosh Narayanan**
