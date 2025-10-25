@@ -1,0 +1,8 @@
+frontend/package.json
+frontend/package-lock.json
+package.yaml
+package.yml
+package.lock
+
+
+cloc --exclude-dir=node_modules,.idea,.venv,build --exclude-ext=pyc --exclude-list-file=exclude_files.txt .
