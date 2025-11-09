@@ -9,9 +9,9 @@ import psycopg2
 from .models import (
     CodeGenerationRequest, GenerationResponse,
     HistoryResponse, HistoryEntry,
-    DocQARequest, IngestRequest
+    DocQARequest, IngestRequest, CodeRefactorRequest
 )
-from .ai_service import generate_content_with_llm, answer_from_docs
+from .ai_service import generate_content_with_llm, answer_from_docs, refactor_code_with_llm
 from ingest import upsert_documents  # import from sibling package (adjust if your layout differs)
 
 # --- Config ---
@@ -137,5 +137,39 @@ async def get_history():
         except Exception:
             pass
 
-# How to run:
-# uvicorn app.main:app --reload
+
+# --- Phase 3 ---
+@app.post("/api/v1/refactor", response_model=GenerationResponse, status_code=200)
+async def refactor_code(request: CodeRefactorRequest):
+    """
+    Takes a code block, calls the AI service to refactor/debug it,
+    and logs the output to PostgreSQL.
+    """
+    ai_response = refactor_code_with_llm(
+        code=request.code_text,
+        language=request.language
+    )
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        insert_query = """
+                       INSERT INTO request_history (user_id, prompt_text, generated_content, request_type, content_language)
+                       VALUES (%s, %s, %s, %s, %s);
+                       """
+        cursor.execute(insert_query, (
+            request.user_id or TEST_USER_ID,
+            request.code_text,
+            ai_response.generated_content,
+            ai_response.request_type,
+            ai_response.content_language
+        ))
+        conn.commit()
+    except Exception as e:
+        print(f"Failed to log refactor history: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+    return ai_response

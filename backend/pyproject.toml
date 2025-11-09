@@ -17,12 +17,9 @@ dependencies = [
     "langchain-openai",
     "qdrant-client",
     "sentence-transformers",
-    "rank-bm25", # lightweight lexical scoring (optional hybrid signal)
-    "rapidfuzz", # fast string scoring for simple rerank fallback
+    "rank-bm25",
+    "rapidfuzz", 
     "uvicorn[standard]",
-    # ADD THESE NEW DEPENDENCIES FOR PHASE 2
-    "langchain-community",
-    "langchain-openai",
 ]
 
 # This section is needed to tell Python how to build the project

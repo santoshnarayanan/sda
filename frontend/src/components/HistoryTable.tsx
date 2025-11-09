@@ -1,123 +1,140 @@
-// src/components/HistoryTable.tsx
-import React, { useEffect, useState } from 'react';
-import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
-import axios from 'axios';
-import { format } from 'date-fns';
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { DataGrid, GridColDef, GridValueGetter } from "@mui/x-data-grid";
 
-// Define the shape of the data based on your FastAPI endpoint
-interface HistoryItem {
-    history_id: number;
-    prompt_text: string;
-    generated_content: string;
-    request_type: string;
-    content_language: string;
-    created_at: string;
+/** Types that match your backend response_model=HistoryResponse */
+export interface HistoryRow {
+  history_id: number;
+  prompt_text: string;
+  generated_content: string;
+  request_type: string;
+  content_language?: string | null;
+  created_at: string; // ISO string from DB
 }
 
-const HistoryTable: React.FC = () => {
-    const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+interface HistoryResponse {
+  history: HistoryRow[];
+}
 
-    useEffect(() => {
-        const fetchHistory = async () => {
-            // Set loading state at the start
-            setLoading(true);
-            setError(null); // Clear previous errors
+export interface HistoryTableProps {
+  onSelect?: (row: HistoryRow) => void;
+}
 
-            try {
-                const response = await axios.get('http://127.0.0.1:8000/api/v1/history');
+/** Small helper to truncate large text safely for a cell */
+const truncate = (v: string, n = 120) => {
+  if (!v) return "";
+  return v.length > n ? v.slice(0, n) + "…" : v;
+};
 
-                const mappedData = response.data.history.map((item: HistoryItem) => ({
-                    ...item,
-                    id: item.history_id,
-                }));
+const HistoryTable: React.FC<HistoryTableProps> = ({ onSelect }) => {
+  const [rows, setRows] = useState<HistoryRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-                setHistoryData(mappedData);
-            } catch (err) {
-                console.error("Error fetching history:", err);
-                setError("Failed to load history data. Is the backend running?");
-            } finally {
-                setLoading(false);
-            }
-        };
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setErr(null);
+        const res = await axios.get<HistoryResponse>("/api/v1/history");
+        if (!cancelled) {
+          // Defensive: ensure row has id property for DataGrid
+          setRows(
+            (res.data.history || []).map((h) => ({
+              ...h,
+            }))
+          );
+        }
+      } catch (e: any) {
+        if (!cancelled) setErr(e?.message || "Failed to load history");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-        // The function is called immediately, and any external error is caught.
-        // This is the clean way to run an async function inside useEffect.
-        fetchHistory()
-            .catch(e => {
-                // This catch handles errors during the *initiation* of fetchHistory,
-                // though most errors are handled inside the try/catch block.
-                console.error("Unexpected error during history fetch initiation:", e);
-            });
-
-    }, []); // Dependency array remains empty
-
-    // Define the columns for the DataGrid
-    const columns: GridColDef[] = [
-        { field: 'history_id', headerName: 'ID', width: 60 },
-        { field: 'prompt_text', headerName: 'Request Prompt', flex: 1,
-            renderCell: (params: GridRenderCellParams) => (
-                <div className="line-clamp-2" title={params.value as string}>
-                    {params.value}
-                </div>
-            )
+  const columns: GridColDef[] = useMemo(
+    () => [
+      {
+        field: "created_at",
+        headerName: "When",
+        flex: 1,
+        minWidth: 160,
+        valueGetter: (p: { value: any }) => {
+          const d = new Date(p.value as string);
+          if (Number.isNaN(d.getTime())) return p.value;
+          // Localized short format
+          return d.toLocaleString();
         },
-        { field: 'content_language', headerName: 'Lang', width: 80 },
-        { field: 'request_type', headerName: 'Type', width: 100 },
-        {
-            field: 'created_at',
-            headerName: 'Date',
-            width: 150,
-            // 👈 USE GridColDef instead for the formatter's parameters
-            // This is the common workaround when the specific parameter type is hidden
-            valueFormatter: (params) => {
-                // Check if params is an object and has a value property before casting
-                const dateValue = params && typeof params === 'object' && 'value' in params
-                    ? (params as { value: string }).value
-                    : null;
+      },
+      {
+        field: "request_type",
+        headerName: "Type",
+        flex: 0.7,
+        minWidth: 120,
+      },
+      {
+        field: "content_language",
+        headerName: "Lang",
+        flex: 0.5,
+        minWidth: 90,
+        valueGetter: (p: { value: any }) => p.value || "",
+      },
+      {
+        field: "prompt_text",
+        headerName: "Prompt",
+        flex: 1.5,
+        minWidth: 220,
+        renderCell: (p) => <span title={p.value as string}>{truncate(String(p.value || ""), 140)}</span>,
+      },
+      {
+        field: "generated_content",
+        headerName: "Output (preview)",
+        flex: 2,
+        minWidth: 280,
+        renderCell: (p) => (
+          <span title={p.value as string}>{truncate(String(p.value || ""), 200)}</span>
+        ),
+      },
+    ],
+    []
+  );
 
-                if (dateValue) {
-                    return format(new Date(dateValue as string), 'MMM dd, HH:mm');
-                }
-                return '';
-            }
-        },
-        {
-            field: 'view',
-            headerName: 'Actions',
-            width: 100,
-            renderCell: (params: GridRenderCellParams) => (
-                <button
-                    className="text-blue-600 hover:text-blue-800 text-sm font-semibold"
-                    onClick={() => alert(`Content: \n\n${params.row.generated_content}`)}
-                >
-                    View Code
-                </button>
-            ),
-            sortable: false,
-            filterable: false,
-        },
-    ];
+  return (
+    <div className="w-full">
+      {err ? (
+        <div className="text-red-600 text-sm mb-3">{err}</div>
+      ) : null}
 
-    if (loading) return <div className="text-center text-xl p-10">Loading History...</div>;
-    if (error) return <div className="text-center text-red-600 text-xl p-10">{error}</div>;
-
-    return (
-        <div className="bg-white p-6 rounded-lg shadow-xl" style={{ height: 600, width: '100%' }}>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Request History</h2>
-            <DataGrid
-                rows={historyData}
-                columns={columns}
-                initialState={{
-                    pagination: { paginationModel: { pageSize: 10 } },
-                }}
-                pageSizeOptions={[5, 10, 25]}
-                // Optional: Add a simple toolbar for searching/filtering if needed later
-                // slots={{ toolbar: GridToolbar }}
-            />
-        </div>
-    );
+      <div style={{ width: "100%" }}>
+        <DataGrid
+          autoHeight
+          rows={rows}
+          getRowId={(r) => r.history_id}
+          columns={columns}
+          loading={loading}
+          initialState={{
+            pagination: { paginationModel: { page: 0, pageSize: 10 } },
+            sorting: { sortModel: [{ field: "created_at", sort: "desc" }] },
+          }}
+          pageSizeOptions={[10, 25, 50]}
+          disableRowSelectionOnClick
+          onRowClick={(params) => {
+            if (onSelect) onSelect(params.row as HistoryRow);
+          }}
+          sx={{
+            "& .MuiDataGrid-cell": { whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" },
+            "& .MuiDataGrid-columnHeaders": { fontWeight: 600 },
+            borderRadius: "12px",
+          }}
+        />
+      </div>
+    </div>
+  );
 };
 
 export default HistoryTable;

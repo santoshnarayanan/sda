@@ -1,35 +1,41 @@
-// frontend/src/components/OutputDisplay.tsx
-// Phase 2 – displays AI output and retrieved document sources
-// ------------------------------------------------------------
-
 import React from "react";
 import { useSelector } from "react-redux";
-import type { RootState } from "../redux/store";
-import SourcesList from "./SourcesList";
+import { RootState } from "../redux/store";
 
-export default function OutputDisplay() {
-  const { output, sources, error, loading } = useSelector(
-    (s: RootState) => s.generation
+/**
+ * We render the backend response verbatim in a preformatted block.
+ * (No extra dependencies like react-markdown to keep the stack lean.)
+ */
+const OutputDisplay: React.FC = () => {
+  const { output, mode, loading } = useSelector(
+    (state: RootState) => state.generation
   );
+
+  if (loading) {
+    return (
+      <div className="p-4 text-gray-500 italic">
+        Working on your {mode === "generate" ? "request" : "refactor"}...
+      </div>
+    );
+  }
+
+  if (!output) {
+    return (
+      <div className="p-4 text-gray-400 italic">
+        {mode === "generate"
+          ? "Generated output will appear here."
+          : "Refactored code and explanation will appear here."}
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full p-4 bg-white rounded-2xl shadow mt-4">
-      <h2 className="text-lg font-semibold text-gray-800 mb-2">Output</h2>
-
-      {/* Error */}
-      {error && (
-        <div className="mb-3 p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">
-          {String(error)}
-        </div>
-      )}
-
-      {/* Main content */}
-      <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-xl border min-h-[160px] overflow-x-auto">
-        {loading ? "… Generating response …" : output || "No output yet."}
+    <div className="p-4 bg-gray-50 rounded-2xl shadow-inner">
+      <pre className="whitespace-pre-wrap break-words text-sm leading-6">
+        {output}
       </pre>
-
-      {/* Retrieved context sources */}
-      {sources && sources.length > 0 && <SourcesList sources={sources} />}
     </div>
   );
-}
+};
+
+export default OutputDisplay;

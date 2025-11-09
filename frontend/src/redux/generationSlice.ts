@@ -1,165 +1,103 @@
-// frontend/src/redux/generationSlice.ts
-// Phase 2 — unified state for Code Generation + Docs Q&A (RAG)
+import axios from "axios";
+
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || "";
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { generateCode, answerFromDocs, type GenerationResponse } from "../lib/api";
-import type { RootState } from "./store";
 
-// -------------------------
-// Types
-// -------------------------
-export type Mode = "code" | "docs";
 
-export interface GenerationState {
-  mode: Mode;
-  prompt: string;
-  language: string;
+/** Slice state */
+interface GenerationState {
+  prompt: string;                     // text area content (request or code)
+  output: string;                     // server response (markdown/code)
+  mode: "generate" | "refactor";      // which action we’re performing
+  language: string;                   // language hint sent to backend
   loading: boolean;
-  error: string | null;
-  output: string;
-  sources: GenerationResponse["sources"];
-  top_k: number;
-  rerank: boolean;
-  filters: Record<string, unknown> | null;
+  error?: string;
 }
 
-// -------------------------
-// Initial State
-// -------------------------
 const initialState: GenerationState = {
-  mode: "code",
   prompt: "",
-  language: "markdown",
-  loading: false,
-  error: null,
   output: "",
-  sources: null,
-  top_k: 6,
-  rerank: true,
-  filters: null,
+  mode: "generate",
+  language: "python",
+  loading: false,
 };
 
-// -------------------------
-// Async Thunks
-// -------------------------
-export const runCodeGen = createAsyncThunk(
-  "generation/runCodeGen",
-  async (payload: { prompt: string; language?: string }, { rejectWithValue }) => {
-    try {
-      const res = await generateCode({
-        prompt_text: payload.prompt,
-        content_language: payload.language ?? "markdown",
-      });
-      return res;
-    } catch (err: any) {
-      return rejectWithValue(err?.response?.data?.detail || err?.message || "Request failed");
-    }
+/** Phase 1/2: generate endpoint */
+export const generateCode = createAsyncThunk(
+  "generation/generateCode",
+  async (payload: { prompt: string; language: string }) => {
+    const res = await axios.post("/api/v1/generate", {
+      prompt_text: payload.prompt,
+      content_language: payload.language,
+    });
+    return res.data.generated_content as string;
   }
 );
 
-export const runDocsQA = createAsyncThunk(
-  "generation/runDocsQA",
-  async (
-    payload: { prompt: string; top_k?: number; rerank?: boolean; filters?: Record<string, unknown> | null },
-    { getState, rejectWithValue }
-  ) => {
-    try {
-      const state = getState() as RootState;
-      const res = await answerFromDocs({
-        prompt_text: payload.prompt,
-        top_k: payload.top_k ?? state.generation.top_k,
-        rerank: payload.rerank ?? state.generation.rerank,
-        filters: payload.filters ?? state.generation.filters,
-        content_language: state.generation.language,
-      });
-      return res;
-    } catch (err: any) {
-      return rejectWithValue(err?.response?.data?.detail || err?.message || "Request failed");
-    }
+/** Phase 3: refactor endpoint */
+export const refactorCode = createAsyncThunk(
+  "generation/refactorCode",
+  async (payload: { code: string; language: string }) => {
+    const res = await axios.post("/api/v1/refactor", {
+      code_text: payload.code,
+      language: payload.language,
+    });
+    return res.data.generated_content as string;
   }
 );
 
-// -------------------------
-// Slice
-// -------------------------
 const generationSlice = createSlice({
   name: "generation",
   initialState,
   reducers: {
-    setMode(state, action: PayloadAction<Mode>) {
-      state.mode = action.payload;
-      state.output = "";
-      state.sources = null;
-      state.error = null;
-    },
-    setPrompt(state, action: PayloadAction<string>) {
+    setPrompt: (state, action: PayloadAction<string>) => {
       state.prompt = action.payload;
     },
-    setLanguage(state, action: PayloadAction<string>) {
+    setMode: (state, action: PayloadAction<"generate" | "refactor">) => {
+      state.mode = action.payload;
+      state.output = ""; // clear output when switching modes
+      state.error = undefined;
+    },
+    setLanguage: (state, action: PayloadAction<string>) => {
       state.language = action.payload;
     },
-    setTopK(state, action: PayloadAction<number>) {
-      state.top_k = action.payload;
-    },
-    setRerank(state, action: PayloadAction<boolean>) {
-      state.rerank = action.payload;
-    },
-    setFilters(state, action: PayloadAction<Record<string, unknown> | null>) {
-      state.filters = action.payload;
-    },
-    clearOutput(state) {
+    clearOutput: (state) => {
       state.output = "";
-      state.sources = null;
-      state.error = null;
+      state.error = undefined;
     },
   },
   extraReducers: (builder) => {
     builder
-      // ---- Code generation ----
-      .addCase(runCodeGen.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      // /generate
+      .addCase(generateCode.pending, (s) => {
+        s.loading = true;
+        s.error = undefined;
       })
-      .addCase(runCodeGen.fulfilled, (state, action: PayloadAction<GenerationResponse>) => {
-        state.loading = false;
-        state.output = action.payload.generated_content;
-        state.sources = action.payload.sources ?? null;
-        state.language = action.payload.content_language || state.language;
+      .addCase(generateCode.fulfilled, (s, a) => {
+        s.loading = false;
+        s.output = a.payload;
       })
-      .addCase(runCodeGen.rejected, (state, action: any) => {
-        state.loading = false;
-        state.error = action.payload || "Request failed";
+      .addCase(generateCode.rejected, (s, a) => {
+        s.loading = false;
+        s.error = a.error.message || "Generation failed";
       })
 
-      // ---- Docs Q&A ----
-      .addCase(runDocsQA.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      // /refactor
+      .addCase(refactorCode.pending, (s) => {
+        s.loading = true;
+        s.error = undefined;
       })
-      .addCase(runDocsQA.fulfilled, (state, action: PayloadAction<GenerationResponse>) => {
-        state.loading = false;
-        state.output = action.payload.generated_content;
-        state.sources = action.payload.sources ?? null;
-        state.language = action.payload.content_language || state.language;
+      .addCase(refactorCode.fulfilled, (s, a) => {
+        s.loading = false;
+        s.output = a.payload;
       })
-      .addCase(runDocsQA.rejected, (state, action: any) => {
-        state.loading = false;
-        state.error = action.payload || "Request failed";
+      .addCase(refactorCode.rejected, (s, a) => {
+        s.loading = false;
+        s.error = a.error.message || "Refactor failed";
       });
   },
 });
 
-// -------------------------
-// Exports
-// -------------------------
-export const {
-  setMode,
-  setPrompt,
-  setLanguage,
-  setTopK,
-  setRerank,
-  setFilters,
-  clearOutput,
-} = generationSlice.actions;
-
+export const { setPrompt, setMode, setLanguage, clearOutput } = generationSlice.actions;
 export default generationSlice.reducer;

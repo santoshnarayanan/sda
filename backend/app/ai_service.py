@@ -178,3 +178,56 @@ def generate_content_with_llm(prompt: str, language: str) -> GenerationResponse:
     # This path used RAG light already; we leave as-is to avoid breaking.
     req = DocQARequest(prompt_text=prompt, top_k=2, rerank=False, filters=None, content_language=language)
     return answer_from_docs(req)
+
+def refactor_code_with_llm(code: str, language: str) -> GenerationResponse:
+    """
+    Performs intelligent code refactoring, optimization, and documentation generation.
+    """
+
+    if llm is None:
+        return GenerationResponse(
+            generated_content="LLM Error: Running in mock mode.",
+            content_language=language,
+            request_type="code_refactor"
+        )
+
+    SYSTEM_PROMPT_REFACTOR = """
+    You are an expert AI code reviewer and refactoring assistant.
+    Analyze the given code carefully and return:
+    1. A corrected and optimized version.
+    2. Added docstrings/comments.
+    3. A short explanation of improvements.
+
+    Output format:
+    ## Refactored Code
+    ```<language>
+    ...
+    ```
+    ## Explanation
+    ...
+    """
+
+    prompt_template = ChatPromptTemplate.from_messages([
+        SystemMessage(content=SYSTEM_PROMPT_REFACTOR),
+        HumanMessage(content=f"Language: {language}\nCode:\n{code}")
+    ])
+
+    try:
+        chain = prompt_template | llm
+        ai_message = chain.invoke({"input": code})
+        full_response = ai_message.content
+
+        # Split the code and explanation if AI follows the format
+        parts = full_response.split("## Explanation", 1)
+        refactored_code = parts[0].replace("## Refactored Code", "").strip()
+        explanation = parts[1].strip() if len(parts) > 1 else "No detailed explanation provided."
+
+    except Exception as e:
+        refactored_code = f"Error: {e}"
+        explanation = "The AI service encountered an error while refactoring."
+
+    return GenerationResponse(
+        generated_content=f"{refactored_code}\n\n## Explanation\n{explanation}",
+        content_language=language,
+        request_type="code_refactor"
+    )

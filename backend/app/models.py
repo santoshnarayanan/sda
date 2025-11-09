@@ -53,3 +53,19 @@ class HistoryEntry(BaseModel):
 
 class HistoryResponse(BaseModel):
     history: list[HistoryEntry]
+
+
+# --- New Models for Phase 3 ---
+
+class CodeRefactorRequest(BaseModel):
+    """Model for submitting code to be refactored or debugged."""
+    code_text: str = Field(..., example="def add(x,y): return x+y")
+    language: str = Field("python", example="python")
+    user_id: Optional[int] = None
+
+
+class RefactorResponse(BaseModel):
+    """Model for the AI's refactored or debugged output."""
+    refactored_code: str
+    explanation: str
+    request_type: str = Field("code_refactor", description="Type of AI task performed")

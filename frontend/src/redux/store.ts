@@ -10,3 +10,4 @@ export const store = configureStore({
 // Export typed hooks
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+export default store;
