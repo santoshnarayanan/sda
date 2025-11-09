@@ -1,39 +1,35 @@
-// src/components/OutputDisplay.tsx
-import React from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../redux/store';
+// frontend/src/components/OutputDisplay.tsx
+// Phase 2 – displays AI output and retrieved document sources
+// ------------------------------------------------------------
 
-const OutputDisplay: React.FC = () => {
-    const { generatedCode, isLoading, error } = useSelector((state: RootState) => state.generation);
+import React from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../redux/store";
+import SourcesList from "./SourcesList";
 
-    // Simple syntax highlighting (can be replaced by a library like react-syntax-highlighter)
-    const languageClass = 'language-text';
+export default function OutputDisplay() {
+  const { output, sources, error, loading } = useSelector(
+    (s: RootState) => s.generation
+  );
 
-    return (
-        <div className="p-6 bg-gray-900 shadow-xl rounded-lg">
-            <h2 className="text-2xl font-bold text-white mb-4">Generated Output</h2>
+  return (
+    <div className="w-full p-4 bg-white rounded-2xl shadow mt-4">
+      <h2 className="text-lg font-semibold text-gray-800 mb-2">Output</h2>
 
-            {error && (
-                <div className="p-3 bg-red-500 text-white rounded-md mb-4">
-                    Error: {error}
-                </div>
-            )}
-
-            <pre className="relative p-4 bg-gray-800 rounded-md overflow-x-auto">
-        {isLoading && generatedCode === '' ? (
-            <div className="text-yellow-400 text-center py-8">Loading...</div>
-        ) : generatedCode ? (
-            <code className={`text-sm text-gray-100 ${languageClass}`}>
-                {generatedCode}
-            </code>
-        ) : (
-            <div className="text-gray-500 text-center py-8">
-                Your generated code will appear here.
-            </div>
-        )}
-      </pre>
+      {/* Error */}
+      {error && (
+        <div className="mb-3 p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">
+          {String(error)}
         </div>
-    );
-};
+      )}
 
-export default OutputDisplay;
+      {/* Main content */}
+      <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-xl border min-h-[160px] overflow-x-auto">
+        {loading ? "… Generating response …" : output || "No output yet."}
+      </pre>
+
+      {/* Retrieved context sources */}
+      {sources && sources.length > 0 && <SourcesList sources={sources} />}
+    </div>
+  );
+}

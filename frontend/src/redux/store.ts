@@ -1,12 +1,12 @@
-import { configureStore } from '@reduxjs/toolkit';
-import generationReducer from './generationSlice';
+import { configureStore } from "@reduxjs/toolkit";
+import generationReducer from "./generationSlice";
 
 export const store = configureStore({
-    reducer: {
-        generation: generationReducer,
-        // Add other reducers here for future phases (e.g., history, user)
-    },
+  reducer: {
+    generation: generationReducer,
+  },
 });
 
+// Export typed hooks
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

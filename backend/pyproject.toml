@@ -3,7 +3,7 @@ name = "smart-dev-assistant-backend"
 version = "0.1.0"
 description = "FastAPI backend for SDA"
 authors = [
-    {name = "Your Name", email = "you@example.com"},
+    {name = "Santosh Narayanan", email = "santosh33@gmail.com"},
 ]
 # Define ALL required application dependencies here as a simple list
 dependencies = [
@@ -12,8 +12,14 @@ dependencies = [
     "langchain",
     "python-dotenv",
     "psycopg2-binary",
-    "sqlmodel", # Optional, but good practice to include it here
-
+    "sqlmodel",
+    "langchain-community",
+    "langchain-openai",
+    "qdrant-client",
+    "sentence-transformers",
+    "rank-bm25", # lightweight lexical scoring (optional hybrid signal)
+    "rapidfuzz", # fast string scoring for simple rerank fallback
+    "uvicorn[standard]",
     # ADD THESE NEW DEPENDENCIES FOR PHASE 2
     "langchain-community",
     "langchain-openai",

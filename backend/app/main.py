@@ -1,143 +1,141 @@
 # app/main.py
 
-from fastapi import FastAPI, HTTPException
-from .models import CodeGenerationRequest, GenerationResponse, HistoryResponse, HistoryEntry
-from .ai_service import generate_content_with_llm
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor  # To get results as dictionaries
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from psycopg2.extras import RealDictCursor
+import psycopg2
 
-# --- Configuration (Replace with actual environment variables) ---
-# NOTE: Using a hardcoded ID for Phase 1 based on our previous discussion
-# The actual user_id should be retrieved from a session/auth token.
-TEST_USER_ID = 1  # Assuming you manually inserted user_id=1 as 'test_dev'
+from .models import (
+    CodeGenerationRequest, GenerationResponse,
+    HistoryResponse, HistoryEntry,
+    DocQARequest, IngestRequest
+)
+from .ai_service import generate_content_with_llm, answer_from_docs
+from ingest import upsert_documents  # import from sibling package (adjust if your layout differs)
 
-# Database Connection Details (Place these in a .env file in a real app)
+# --- Config ---
+TEST_USER_ID = 1  # Phase 1 simplification
 DB_HOST = os.environ.get("DB_HOST", "localhost")
 DB_NAME = os.environ.get("DB_NAME", "sda_dev_db")
 DB_USER = os.environ.get("DB_USER", "postgres")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "atos@123")  # CHANGE THIS
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "atos@123")  # CHANGE IN PROD
+INTERNAL_INGEST_KEY = os.environ.get("INTERNAL_INGEST_KEY", "super-secret-key-dev")
 
-app = FastAPI(
-    title="Smart Developer Assistant Backend (Phase 1)",
-    version="1.0"
-)
+app = FastAPI(title="Smart Developer Assistant Backend (Phase 2)", version="2.0")
 
-# --- CRITICAL CORS CONFIGURATION ---
-# This allows the frontend (running on a different port) to access the backend.
-
-origins = [
-    # Replace with your actual frontend port if different from 5173
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,             # Allow requests from your frontend development server
-    allow_credentials=True,            # Allow cookies/authorization headers
-    allow_methods=["*"],               # Allow all methods (GET, POST, OPTIONS, etc.)
-    allow_headers=["*"],               # Allow all headers
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# --- Database Utility Function ---
-
 def get_db_connection():
-    """Establishes and returns a PostgreSQL connection."""
     try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD
-        )
-        return conn
+        return psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
     except Exception as e:
         print(f"Database connection failed: {e}")
-        # In a real app, you might want to stop startup or log this aggressively
         raise HTTPException(status_code=503, detail="Database service unavailable")
 
-
-# --- API Endpoints ---
-
+# --- Phase 1 endpoint (kept) ---
 @app.post("/api/v1/generate", response_model=GenerationResponse, status_code=200)
 async def generate_code_and_log(request: CodeGenerationRequest):
-    """
-    Takes a prompt, calls the AI service, and logs the result to PostgreSQL.
-    """
-
-    # 1. Generate content using the LLM service (LangChain integration placeholder)
-    ai_response = generate_content_with_llm(
-        prompt=request.prompt_text,
-        language=request.content_language
-    )
-
-    # 2. Log the request and response to PostgreSQL
-    conn = None
+    ai_response = generate_content_with_llm(prompt=request.prompt_text, language=request.content_language)
+    # Log best-effort
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # SQL INSERT statement
-        insert_query = """
-                       INSERT INTO request_history (user_id, prompt_text, generated_content, request_type, \
-                                                    content_language)
-                       VALUES (%s, %s, %s, %s, %s); \
-                       """
-        cursor.execute(insert_query, (
-            TEST_USER_ID,  # Hardcoded for Phase 1
-            request.prompt_text,
-            ai_response.generated_content,
-            ai_response.request_type,
-            ai_response.content_language
-        ))
-
-        conn.commit()
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO request_history (user_id, prompt_text, generated_content, request_type, content_language)
+                VALUES (%s, %s, %s, %s, %s);
+                """,
+                (TEST_USER_ID, request.prompt_text, ai_response.generated_content, ai_response.request_type, ai_response.content_language),
+            )
+            conn.commit()
     except Exception as e:
-        # Log the error, but don't prevent the AI response from being returned
-        print(f"Failed to log history to DB: {e}")
-        # Optionally, raise an exception if logging is critical
+        print(f"Failed to log history: {e}")
     finally:
-        if conn:
+        try:
             conn.close()
-
-    # 3. Return the AI response to the frontend
+        except Exception:
+            pass
     return ai_response
 
-
-@app.get("/api/v1/history", response_model=HistoryResponse)
-async def get_history():
-    """
-    Retrieves the request history for the test user from PostgreSQL.
-    """
-    conn = None
+# --- Phase 2: Docs Q&A with retrieval params ---
+@app.post("/api/v1/answer_from_docs", response_model=GenerationResponse, status_code=200)
+async def answer_from_docs_api(request: DocQARequest):
+    resp = answer_from_docs(request)
+    # Optional: log this too
     try:
         conn = get_db_connection()
-        # Use RealDictCursor to get results as dicts, easier for Pydantic mapping
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO request_history (user_id, prompt_text, generated_content, request_type, content_language)
+                VALUES (%s, %s, %s, %s, %s);
+                """,
+                (TEST_USER_ID, request.prompt_text, resp.generated_content, resp.request_type, resp.content_language),
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"Failed to log docs_qa history: {e}")
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return resp
+
+# --- Phase 2: Secure ingestion endpoint ---
+def require_internal_key(x_internal_key: str = Header(...)):
+    if x_internal_key != os.environ.get("INTERNAL_INGEST_KEY", INTERNAL_INGEST_KEY):
+        raise HTTPException(status_code=401, detail="Invalid X-Internal-Key")
+    return True
+
+@app.post("/api/v1/upload_docs", dependencies=[Depends(require_internal_key)], status_code=200)
+async def upload_docs_api(payload: IngestRequest):
+    # Upsert a single text doc (filename + text + tags)
+    try:
+        total = upsert_documents(
+            docs=[{"text": payload.text, "source": payload.filename, "doctype": "txt"}],
+            default_tags=payload.tags or {},
+            recreate=False,
+        )
+        return {"indexed_points": total, "status": "ok"}
+    except Exception as e:
+        print(f"Ingestion error: {e}")
+        raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
+
+# --- History (kept) ---
+@app.get("/api/v1/history", response_model=HistoryResponse)
+async def get_history():
+    try:
+        conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-        # SQL SELECT statement
-        select_query = """
-                       SELECT history_id, prompt_text, generated_content, request_type, content_language, created_at
-                       FROM request_history
-                       WHERE user_id = %s
-                       ORDER BY created_at DESC; \
-                       """
-        cursor.execute(select_query, (TEST_USER_ID,))
-
-        # Map DB results to Pydantic model
+        cursor.execute(
+            """
+            SELECT history_id, prompt_text, generated_content, request_type, content_language, created_at
+            FROM request_history
+            WHERE user_id = %s
+            ORDER BY created_at DESC;
+            """,
+            (TEST_USER_ID,),
+        )
         history_list = [HistoryEntry(**row) for row in cursor.fetchall()]
-
         return HistoryResponse(history=history_list)
-
     except Exception as e:
         print(f"Failed to fetch history: {e}")
         raise HTTPException(status_code=500, detail="Error retrieving history")
     finally:
-        if conn:
+        try:
             conn.close()
+        except Exception:
+            pass
 
-# --- How to Run the Server ---
-# Save the files, install dependencies, and run from your terminal:
+# How to run:
 # uvicorn app.main:app --reload

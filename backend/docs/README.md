@@ -8,13 +8,10 @@ It demonstrates a robust, decoupled architecture leveraging the power of **Retri
 
 ## ✨ Features (Phase 2 Complete)
 
-- 🧠 **Intelligent RAG** – Answers project-specific questions using documentation embedded and indexed in Qdrant.  
-- 💡 **Code Generation** – Generates new code snippets, explanations, and fixes via an OpenAI LLM.  
-- 🧾 **Context Traceability** – Displays document *sources*, chunk IDs, and similarity scores for each answer.  
-- 🔒 **Secure Ingestion** – Backend endpoint `/api/v1/upload_docs` protected by `X-Internal-Key` for controlled knowledge-base updates.  
-- 🪄 **Modern UI Toggle** – Switch seamlessly between *Code* and *Docs Q&A* modes.  
-- 🧩 **Full-Stack Auditability** – Every request and AI response logged in PostgreSQL.  
-- 🎨 **Modern Design** – React + Tailwind CSS UI, MUI DataGrid for history.  
+- **Intelligent RAG** — Answers domain-specific questions using a secure, custom knowledge base indexed in Qdrant.  
+- **Code Generation** — Generates unique code snippets and solutions using a live OpenAI LLM.  
+- **Full-Stack Auditability** — All interactions are logged to a PostgreSQL database for history and auditing.  
+- **Modern UI** — Built with React and styled using Tailwind CSS. Data history is displayed using the free MUI DataGrid.
 
 ---
 
@@ -22,12 +19,12 @@ It demonstrates a robust, decoupled architecture leveraging the power of **Retri
 
 | Component | Technology | Role |
 |------------|-------------|------|
-| **Frontend (UI)** | React + Redux + TypeScript | Component architecture and state management |
-| **Styling** | Tailwind CSS + PostCSS | Utility-first styling |
-| **Backend (API)** | Python + FastAPI | Asynchronous REST API |
-| **AI Orchestration** | LangChain | LLM prompt chaining and retrieval |
-| **Vector DB** | Qdrant (Cloud) | Stores embeddings of docs |
-| **Relational DB** | PostgreSQL | Persists user and history data |
+| **Frontend (UI)** | React.js + Redux + TypeScript | Component-based structure and global state management |
+| **Styling** | Tailwind CSS + PostCSS | Utility-first, professional styling |
+| **Backend (API)** | Python + FastAPI | High-performance, asynchronous REST API |
+| **Orchestration** | LangChain | Manages the RAG pipeline, prompting, and LLM interactions |
+| **Vector DB** | Qdrant | Stores vector embeddings of technical documentation |
+| **Relational DB** | PostgreSQL | Stores structured data (user history, accounts) |
 
 ---
 
@@ -35,10 +32,10 @@ It demonstrates a robust, decoupled architecture leveraging the power of **Retri
 
 ### Prerequisites
 
-- **Python 3.10+**, **Node.js 18+**, **uv** (package manager)  
-- **PostgreSQL** (local or remote)  
-- **Qdrant Cloud cluster** (with API key)  
-- **OpenAI API key**
+- **Python 3.10+** and **Node.js/npm**  
+- **PostgreSQL instance** running locally  
+- **Qdrant instance** (Cloud or Docker)  
+- **OpenAI API Key** set in `.env`
 
 ---
 
@@ -46,11 +43,16 @@ It demonstrates a robust, decoupled architecture leveraging the power of **Retri
 
 ```bash
 sda/
-sda/
+├── .gitignore
 ├── README.md
+├── LICENSE.md
+├── NOTICE.md
 ├── TECHNICAL_DESIGN.md
 ├── backend/
 │   ├── app/
+│   │   ├── ai_service.py
+│   │   ├── main.py
+│   │   └── models.py
 │   ├── docs/
 │   └── ingest.py
 └── frontend/
@@ -78,21 +80,9 @@ uv pip install langchain-core qdrant-client sentence-transformers
 Create a `.env` file in `backend/` and populate it with:
 
 ```env
-# Database
-DB_HOST=localhost
-DB_NAME=sda_dev_db
-DB_USER=postgres
 DB_PASSWORD=your_password
-
-# Qdrant
-QDRANT_URL=https://<your-cluster>.cloud.qdrant.io
-QDRANT_API_KEY=<your_qdrant_key>
-
-# OpenAI
-OPENAI_API_KEY=<your_openai_key>
-
-# Internal upload key
-INTERNAL_INGEST_KEY=super-secret-key-dev
+QDRANT_URL=http://localhost:6333
+OPENAI_API_KEY=your_openai_api_key
 ```
 
 #### 3. Initialize Database
