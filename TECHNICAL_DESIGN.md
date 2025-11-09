@@ -21,7 +21,7 @@ SDA follows a **modular microservice architecture**, separating:
 - React + Redux (frontend)
 
 ### 🏗️ System Architecture
-![System Architecture](./images/Archiecture.png)
+![System Architecture](images/Archiecture.png)
 
 **Phase 2 Enhancements**
 - Added RAG retrieval flow via Qdrant.  
@@ -31,7 +31,7 @@ SDA follows a **modular microservice architecture**, separating:
 ---
 
 ## 3. RAG Data Flow
-![RAG Sequence Flow](./images/Sequence.png)
+![RAG Sequence Flow](images/Sequence.png)
 
 1️⃣ Frontend submits prompt → FastAPI (`main.py`)  
 2️⃣ Retriever in `ai_service.py` queries Qdrant collection `sda_dev_documentation`  
@@ -43,7 +43,7 @@ SDA follows a **modular microservice architecture**, separating:
 ---
 
 ## 4. Backend Implementation
-![Backend Architecture](./images/Backend.png)
+![Backend Architecture](images/Backend.png)
 
 ### Modules
 | Module | Responsibility |
@@ -62,7 +62,7 @@ SDA follows a **modular microservice architecture**, separating:
 ---
 
 ## 5. Frontend Design & Interaction
-![Frontend to API Flow](./images/Frontend-API.png)
+![Frontend to API Flow](images/Frontend-API.png)
 
 **Core Components**
 | Component | Purpose |
@@ -81,7 +81,7 @@ SDA follows a **modular microservice architecture**, separating:
 ---
 
 ## 6. Database Design
-![Database ER Diagram](./images/ER.png)
+![Database ER Diagram](images/ER.png)
 
 | Entity | Description |
 |---------|-------------|
