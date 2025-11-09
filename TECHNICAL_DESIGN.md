@@ -14,7 +14,7 @@ SDA follows a **modular microservice architecture**, separating:
 - React + Redux (frontend)
 
 ### 🏗️ System Architecture
-![System Architecture](images/Architecture.png)
+![System Architecture](images/Phase2diagram.png)
 
 **Phase 2 Enhancements**
 - Added RAG retrieval flow via Qdrant.  
