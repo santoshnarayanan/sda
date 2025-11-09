@@ -1,10 +1,3 @@
-
----
-
-## 📗 Updated TECHNICAL_DESIGN.md
-*(for `/TECHNICAL_DESIGN.md`)*  
-
-```markdown
 # 📘 Technical Design — Smart Developer Assistant (SDA)
 
 ## 1. Introduction
@@ -21,7 +14,7 @@ SDA follows a **modular microservice architecture**, separating:
 - React + Redux (frontend)
 
 ### 🏗️ System Architecture
-![System Architecture](images/Archiecture.png)
+![System Architecture](images/Architecture.png)
 
 **Phase 2 Enhancements**
 - Added RAG retrieval flow via Qdrant.  
@@ -91,6 +84,7 @@ SDA follows a **modular microservice architecture**, separating:
 | `user_snippets` | (Phase 3+) Saved code snippets |
 
 Qdrant collection `"sda_dev_documentation"` stores embeddings with metadata:
+
 ```json
 {
   "text": "document chunk text",
