@@ -1,113 +1,93 @@
-import React from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "../redux/store";
-import {
-  setPrompt,
-  setMode,
-  setLanguage,
-  generateCode,
-  refactorCode,
-} from "../redux/generationSlice";
+// src/components/GenerationArea.tsx
+import { useState } from "react";
+import axios from "axios";
+import VoiceRecorder from "./Recorder";
 
-const GenerationArea: React.FC = () => {
-  const dispatch = useDispatch<any>();
-  const { prompt, mode, language, loading, error } = useSelector(
-    (state: RootState) => state.generation
-  );
+export default function GenerationArea() {
+  // --- State management ---
+  const [prompt, setPrompt] = useState("");
+  const [language, setLanguage] = useState("python");
+  const [generated, setGenerated] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = () => {
-    if (mode === "generate") {
-      dispatch(generateCode({ prompt, language }));
-    } else {
-      dispatch(refactorCode({ code: prompt, language }));
+  // --- Generate handler (new implementation) ---
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await axios.post("http://localhost:8000/api/v1/generate", {
+        prompt_text: prompt,
+        content_language: language,
+      });
+      setGenerated(data.generated_content || data);
+    } catch (err: any) {
+      console.error("Error generating code:", err);
+      setError("Generation failed. Check backend connection.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      {/* Mode Toggle */}
-      <div className="flex items-center gap-2">
-        <button
-          className={`px-3 py-2 rounded-xl border ${
-            mode === "generate"
-              ? "bg-blue-600 text-white border-blue-600"
-              : "bg-white text-gray-700 border-gray-300"
-          }`}
-          onClick={() => dispatch(setMode("generate"))}
-        >
-          Generate
-        </button>
-        <button
-          className={`px-3 py-2 rounded-xl border ${
-            mode === "refactor"
-              ? "bg-blue-600 text-white border-blue-600"
-              : "bg-white text-gray-700 border-gray-300"
-          }`}
-          onClick={() => dispatch(setMode("refactor"))}
-        >
-          Refactor
-        </button>
+    <div className="space-y-4">
+      {/* --- Prompt Input Area --- */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-gray-700">
+          Enter your request or speak below
+        </label>
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={5}
+          className="w-full rounded-2xl border border-gray-300 bg-white p-3 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
+          placeholder="e.g., Write a Python function to reverse a string."
+        />
+      </div>
 
-        {/* Language Selector */}
+      {/* --- Controls Row --- */}
+      <div className="flex flex-wrap items-center gap-2">
         <select
-          className="ml-auto px-3 py-2 border rounded-xl"
           value={language}
-          onChange={(e) => dispatch(setLanguage(e.target.value))}
-          title="Language hint"
+          onChange={(e) => setLanguage(e.target.value)}
+          className="rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
         >
           <option value="python">Python</option>
-          <option value="jsx">React/JSX</option>
-          <option value="typescript">TypeScript</option>
           <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
           <option value="java">Java</option>
-          <option value="go">Go</option>
           <option value="csharp">C#</option>
-          <option value="markdown">Markdown</option>
         </select>
-      </div>
 
-      {/* Input */}
-      <textarea
-        className="w-full h-56 p-3 border rounded-2xl font-mono outline-none focus:ring-2 focus:ring-blue-600"
-        placeholder={
-          mode === "generate"
-            ? "Enter your request (e.g., 'Write a Python function to parse a CSV...')"
-            : "Paste code to refactor (it will be analyzed, optimized, and documented)..."
-        }
-        value={prompt}
-        onChange={(e) => dispatch(setPrompt(e.target.value))}
-      />
-
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500">
-          {mode === "generate"
-            ? "Tips: Be explicit about the language and constraints."
-            : "Tips: Provide runnable code and include context if needed."}
-        </div>
         <button
-          className={`px-4 py-2 rounded-xl text-white ${
-            loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:opacity-90"
+          onClick={handleGenerate}
+          disabled={loading}
+          className={`rounded-2xl px-4 py-2 font-medium text-white shadow transition ${
+            loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
           }`}
-          onClick={onSubmit}
-          disabled={loading || !prompt.trim()}
         >
-          {loading
-            ? "Processing..."
-            : mode === "generate"
-            ? "Generate"
-            : "Refactor"}
+          {loading ? "Generating..." : "Generate"}
         </button>
+
+        {/* 🎙️ Voice Recorder */}
+        <VoiceRecorder onTranscribed={(text) => setPrompt(text)} />
       </div>
 
-      {/* Error */}
+      {/* --- Error display --- */}
       {error && (
-        <div className="text-sm text-red-600">
-          {error}
+        <div className="text-sm text-red-600 font-medium">{error}</div>
+      )}
+
+      {/* --- Generated Output --- */}
+      {generated && (
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-inner">
+          <h3 className="text-md font-semibold mb-2">Generated Output</h3>
+          <pre className="whitespace-pre-wrap text-sm leading-relaxed">
+            {generated}
+          </pre>
         </div>
       )}
     </div>
   );
-};
-
-export default GenerationArea;
+}

@@ -17,6 +17,7 @@ from .ai_service import generate_content_with_llm, answer_from_docs, refactor_co
 # import from sibling package (adjust if your layout differs)
 from ingest import upsert_documents
 from .project_ingest import ingest_project_zip
+from .speech_service import router as speech_router
 
 # --- Config ---
 TEST_USER_ID = 1  # Phase 1 simplification
@@ -40,6 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(speech_router)
 
 def get_db_connection():
     try:
