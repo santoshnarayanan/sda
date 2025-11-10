@@ -80,3 +80,18 @@ CREATE TABLE project_collections (
     qdrant_collection TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+```
+![ER Phase 4](./images/ER_Phase4.png)
+```
+
+###  Request Response
+
+```
+![Request response Diagram](./images/Request-response_Phase4.png)
+```
+
+### Sequence Diagram 
+```
+![Sequence Diagram](./images/Sequence_Phase4.png)
+```
