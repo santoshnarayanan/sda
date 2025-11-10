@@ -2,9 +2,7 @@
 name = "smart-dev-assistant-backend"
 version = "0.1.0"
 description = "FastAPI backend for SDA"
-authors = [
-    {name = "Santosh Narayanan", email = "santosh33@gmail.com"},
-]
+authors = [{ name = "Santosh Narayanan", email = "santosh33@gmail.com" }]
 # Define ALL required application dependencies here as a simple list
 dependencies = [
     "fastapi",
@@ -18,8 +16,14 @@ dependencies = [
     "qdrant-client",
     "sentence-transformers",
     "rank-bm25",
-    "rapidfuzz", 
+    "rapidfuzz",
     "uvicorn[standard]",
+    "pillow",
+    "python-multipart",
+    "langchain-core",
+    "langchainhub",
+    "langchain-experimental",
+
 ]
 
 # This section is needed to tell Python how to build the project

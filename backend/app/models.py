@@ -69,3 +69,43 @@ class RefactorResponse(BaseModel):
     refactored_code: str
     explanation: str
     request_type: str = Field("code_refactor", description="Type of AI task performed")
+
+
+# --- New Models for Phase 4 ---
+
+class ProjectUploadResponse(BaseModel):
+    user_id: int
+    project_name: str
+    qdrant_collection: str
+    files_indexed: int
+    chunks_indexed: int
+    
+class AnalyzeProjectRequest(BaseModel):
+    user_id: int
+    # Use either collection_name directly or (optionally) a project_name that you resolve to a collection
+    collection_name: str = Field(..., description="Qdrant collection for this project")
+    focus: Optional[str] = Field(None, description="Optional focus area: architecture|dependencies|entrypoints|risks")
+
+
+class AnalyzeProjectResponse(BaseModel):
+    collection_name: str
+    focus: Optional[str]
+    summary_markdown: str
+
+
+class ReviewCodeRequest(BaseModel):
+    user_id: int
+    collection_name: str
+    code: str
+    language: Optional[str] = "python"
+    ruleset: Optional[str] = Field(
+    default="default",
+    description="'default' (balanced), 'security' (OWASP/semgrep‑style), or 'style' (PEP8/ESLint tips)"
+    )
+
+
+class ReviewCodeResponse(BaseModel):
+    collection_name: str
+    language: str
+    ruleset: str
+    review_markdown: str

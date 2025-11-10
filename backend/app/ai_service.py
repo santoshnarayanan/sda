@@ -32,6 +32,21 @@ When showing code, use fenced Markdown code blocks and minimal commentary.
 Prefer direct, actionable answers.
 """
 
+ANALYZE_SYSTEM = """
+You are SDA, a senior software architect. Given retrieved code/doc chunks, produce a concise, accurate, and actionable
+**architecture summary** including: main modules, data flow, external services, key dependencies, and likely entrypoints.
+Prefer bullet lists and small code fences for examples. End with a short risk/tech‑debt section.
+"""
+
+
+REVIEW_SYSTEM = """
+You are SDA, a principal engineer and security reviewer. Given a code snippet and related context, provide:
+1) Issues (bugs, smells, security)
+2) Improvements (style/perf/security)
+3) Example patches
+Keep it **specific** with line‑level suggestions where possible.
+"""
+
 # --- Initialize global components ---
 try:
     llm = ChatOpenAI(model="gpt-3.5-turbo", api_key=OPENAI_API_KEY, temperature=0.2)
@@ -231,3 +246,69 @@ def refactor_code_with_llm(code: str, language: str) -> GenerationResponse:
         content_language=language,
         request_type="code_refactor"
     )
+
+
+def _make_vector_store_for_collection(collection_name: str) -> Qdrant:
+    from langchain_community.embeddings import SentenceTransformerEmbeddings
+    embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+    client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+    return Qdrant(client=client, collection_name=collection_name, embeddings=embeddings, content_payload_key="text")
+
+
+def analyze_project_structure(collection_name: str, focus: str | None = None) -> str:
+    vs = _make_vector_store_for_collection(collection_name)
+    retriever = vs.as_retriever(search_kwargs={"k": 6})
+    # Pull a broad cross‑section of the codebase
+    docs = retriever.invoke(f"project {collection_name} {focus or ''}")
+    context = "\n\n".join(d.page_content for d in docs)
+
+
+    prompt = ChatPromptTemplate.from_messages([
+    SystemMessage(content=ANALYZE_SYSTEM),
+    HumanMessage(content=(
+    f"Context (snippets from project '{collection_name}'):\n---\n{context}\n---\n"
+    f"Focus: {focus or 'general'}\n"
+    f"Task: Produce a clear architecture summary with components, dependencies, entrypoints, and risks."
+    ))
+    ])
+
+
+    try:
+        result = (prompt | llm).invoke({"input": "analyze"})
+        return result.content
+    except Exception as e:
+        return f"Analysis failed: {e}"
+    
+
+def review_code_snippet(collection_name: str, code: str, language: str = "python", ruleset: str = "default") -> str:
+    vs = _make_vector_store_for_collection(collection_name)
+    retriever = vs.as_retriever(search_kwargs={"k": 4})
+    # Guide retrieval with filename hints when possible
+    hint = {
+    "python": "py",
+    "javascript": "js",
+    "typescript": "ts",
+    "jsx": "jsx",
+    "tsx": "tsx",
+    }.get(language.lower(), "code")
+
+
+    docs = retriever.invoke(f"{hint} {ruleset} security style best practices")
+    context = "\n\n".join(d.page_content for d in docs)
+
+    prompt = ChatPromptTemplate.from_messages([
+        SystemMessage(content=REVIEW_SYSTEM),
+        HumanMessage(content=(
+            f"Context from project '{collection_name}':\n---\n{context}\n---\n\n"
+            f"Language: {language}\nRuleset: {ruleset}\n\n"
+            f"Code to review:\n```{language}\n{code}\n```\n\n"
+            f"Provide issues, improvements, and concrete patches."
+            ))
+    ])
+
+
+    try:
+        result = (prompt | llm).invoke({"input": "review"})
+        return result.content
+    except Exception as e:
+        return f"Review failed: {e}"

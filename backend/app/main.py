@@ -9,10 +9,14 @@ import psycopg2
 from .models import (
     CodeGenerationRequest, GenerationResponse,
     HistoryResponse, HistoryEntry,
-    DocQARequest, IngestRequest, CodeRefactorRequest
+    DocQARequest, IngestRequest, CodeRefactorRequest,
+    ProjectUploadResponse, AnalyzeProjectRequest, AnalyzeProjectResponse,
+    ReviewCodeRequest, ReviewCodeResponse
 )
-from .ai_service import generate_content_with_llm, answer_from_docs, refactor_code_with_llm
-from ingest import upsert_documents  # import from sibling package (adjust if your layout differs)
+from .ai_service import generate_content_with_llm, answer_from_docs, refactor_code_with_llm, analyze_project_structure, review_code_snippet
+# import from sibling package (adjust if your layout differs)
+from ingest import upsert_documents
+from .project_ingest import ingest_project_zip
 
 # --- Config ---
 TEST_USER_ID = 1  # Phase 1 simplification
@@ -20,9 +24,11 @@ DB_HOST = os.environ.get("DB_HOST", "localhost")
 DB_NAME = os.environ.get("DB_NAME", "sda_dev_db")
 DB_USER = os.environ.get("DB_USER", "postgres")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "atos@123")  # CHANGE IN PROD
-INTERNAL_INGEST_KEY = os.environ.get("INTERNAL_INGEST_KEY", "super-secret-key-dev")
+INTERNAL_INGEST_KEY = os.environ.get(
+    "INTERNAL_INGEST_KEY", "super-secret-key-dev")
 
-app = FastAPI(title="Smart Developer Assistant Backend (Phase 2)", version="2.0")
+app = FastAPI(
+    title="Smart Developer Assistant Backend (Phase 2)", version="2.0")
 
 origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
@@ -34,17 +40,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 def get_db_connection():
     try:
         return psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
     except Exception as e:
         print(f"Database connection failed: {e}")
-        raise HTTPException(status_code=503, detail="Database service unavailable")
+        raise HTTPException(
+            status_code=503, detail="Database service unavailable")
 
 # --- Phase 1 endpoint (kept) ---
+
+
 @app.post("/api/v1/generate", response_model=GenerationResponse, status_code=200)
 async def generate_code_and_log(request: CodeGenerationRequest):
-    ai_response = generate_content_with_llm(prompt=request.prompt_text, language=request.content_language)
+    ai_response = generate_content_with_llm(
+        prompt=request.prompt_text, language=request.content_language)
     # Log best-effort
     try:
         conn = get_db_connection()
@@ -54,7 +65,8 @@ async def generate_code_and_log(request: CodeGenerationRequest):
                 INSERT INTO request_history (user_id, prompt_text, generated_content, request_type, content_language)
                 VALUES (%s, %s, %s, %s, %s);
                 """,
-                (TEST_USER_ID, request.prompt_text, ai_response.generated_content, ai_response.request_type, ai_response.content_language),
+                (TEST_USER_ID, request.prompt_text, ai_response.generated_content,
+                 ai_response.request_type, ai_response.content_language),
             )
             conn.commit()
     except Exception as e:
@@ -67,6 +79,8 @@ async def generate_code_and_log(request: CodeGenerationRequest):
     return ai_response
 
 # --- Phase 2: Docs Q&A with retrieval params ---
+
+
 @app.post("/api/v1/answer_from_docs", response_model=GenerationResponse, status_code=200)
 async def answer_from_docs_api(request: DocQARequest):
     resp = answer_from_docs(request)
@@ -79,7 +93,8 @@ async def answer_from_docs_api(request: DocQARequest):
                 INSERT INTO request_history (user_id, prompt_text, generated_content, request_type, content_language)
                 VALUES (%s, %s, %s, %s, %s);
                 """,
-                (TEST_USER_ID, request.prompt_text, resp.generated_content, resp.request_type, resp.content_language),
+                (TEST_USER_ID, request.prompt_text, resp.generated_content,
+                 resp.request_type, resp.content_language),
             )
             conn.commit()
     except Exception as e:
@@ -92,17 +107,21 @@ async def answer_from_docs_api(request: DocQARequest):
     return resp
 
 # --- Phase 2: Secure ingestion endpoint ---
+
+
 def require_internal_key(x_internal_key: str = Header(...)):
     if x_internal_key != os.environ.get("INTERNAL_INGEST_KEY", INTERNAL_INGEST_KEY):
         raise HTTPException(status_code=401, detail="Invalid X-Internal-Key")
     return True
+
 
 @app.post("/api/v1/upload_docs", dependencies=[Depends(require_internal_key)], status_code=200)
 async def upload_docs_api(payload: IngestRequest):
     # Upsert a single text doc (filename + text + tags)
     try:
         total = upsert_documents(
-            docs=[{"text": payload.text, "source": payload.filename, "doctype": "txt"}],
+            docs=[{"text": payload.text,
+                   "source": payload.filename, "doctype": "txt"}],
             default_tags=payload.tags or {},
             recreate=False,
         )
@@ -112,6 +131,8 @@ async def upload_docs_api(payload: IngestRequest):
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {e}")
 
 # --- History (kept) ---
+
+
 @app.get("/api/v1/history", response_model=HistoryResponse)
 async def get_history():
     try:
@@ -173,3 +194,82 @@ async def refactor_code(request: CodeRefactorRequest):
             conn.close()
 
     return ai_response
+
+
+@app.post("/api/v1/upload_project", response_model=ProjectUploadResponse)
+async def upload_project(
+    user_id: int = Form(...),
+    project_name: str = Form(...),
+    file: UploadFile = File(...)
+):
+    if not file.filename.lower().endswith(".zip"):
+        raise HTTPException(status_code=400, detail="Please upload a .zip file")
+
+
+    file_bytes = await file.read()
+    collection_name, files_indexed, chunks_indexed = ingest_project_zip(
+        user_id, project_name, file_bytes)
+
+
+    # Optional: persist mapping in DB if table exists
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+                CREATE TABLE IF NOT EXISTS project_collections (
+                    id SERIAL PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    project_name TEXT,
+                    qdrant_collection TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """
+            )
+        cur.execute(
+            "INSERT INTO project_collections (user_id, project_name, qdrant_collection) VALUES (%s, %s, %s)",
+            (user_id, project_name, collection_name)
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"[WARN] Could not persist project mapping: {e}")
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+    return ProjectUploadResponse(
+        user_id=user_id,
+        project_name=project_name,
+        qdrant_collection=collection_name,
+        files_indexed=files_indexed,
+        chunks_indexed=chunks_indexed,
+    )
+
+
+@app.post("/api/v1/analyze_project", response_model=AnalyzeProjectResponse)
+async def analyze_project(req: AnalyzeProjectRequest):
+    summary = analyze_project_structure(req.collection_name, req.focus)
+    return AnalyzeProjectResponse(
+        collection_name=req.collection_name,
+        focus=req.focus,
+        summary_markdown=summary,
+    )
+
+
+@app.post("/api/v1/review_code", response_model=ReviewCodeResponse)
+async def review_code(req: ReviewCodeRequest):
+    review = review_code_snippet(
+        collection_name=req.collection_name,
+        code=req.code,
+        language=req.language or "python",
+        ruleset=req.ruleset or "default",
+    )
+    return ReviewCodeResponse(
+        collection_name=req.collection_name,
+        language=req.language or "python",
+        ruleset=req.ruleset or "default",
+        review_markdown=review,
+    )

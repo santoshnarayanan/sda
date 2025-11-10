@@ -1,53 +1,66 @@
-// Phase 2 – unified API client for SDA frontend
-// -------------------------------------------------
-
 import axios from "axios";
 
-// baseURL comes from your Vite env
-export const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
-    headers: {
-        "Content-Type": "application/json",
-    },
+
+const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
+
+const api = axios.create({
+    baseURL: BASE_URL,
 });
 
-// ---- Types ----
-export interface GenerationPayload {
-    prompt_text: string;
-    user_id?: number | null;
-    content_language?: string;
-}
 
-export interface DocQAPayload {
-    prompt_text: string;
-    user_id?: number | null;
-    top_k?: number;
-    rerank?: boolean;
-    filters?: Record<string, unknown> | null;
-    content_language?: string;
-}
+export type UploadResponse = {
+    user_id: number;
+    project_name: string;
+    qdrant_collection: string;
+    files_indexed: number;
+    chunks_indexed: number;
+};
 
-export interface SourceChunk {
-    source: string;
-    chunk_id: number;
-    score?: number | null;
-    snippet?: string | null;
-}
 
-export interface GenerationResponse {
-    generated_content: string;
-    content_language: string;
-    request_type: string;
-    sources?: SourceChunk[] | null;
-}
+export async function uploadProject(params: {
+    userId: number;
+    projectName: string;
+    file: File;
+}): Promise<UploadResponse> {
+    const form = new FormData();
+    form.append("user_id", String(params.userId));
+    form.append("project_name", params.projectName);
+    form.append("file", params.file);
 
-// ---- API functions ----
-export async function generateCode(payload: GenerationPayload) {
-    const { data } = await api.post<GenerationResponse>("/api/v1/generate", payload);
+
+    const { data } = await api.post<UploadResponse>("/api/v1/upload_project", form, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
     return data;
 }
 
-export async function answerFromDocs(payload: DocQAPayload) {
-    const { data } = await api.post<GenerationResponse>("/api/v1/answer_from_docs", payload);
+
+export async function analyzeProject(params: {
+    collectionName: string;
+    focus?: string | null;
+}): Promise<{ collection_name: string; focus?: string; summary_markdown: string }> {
+    const { data } = await api.post("/api/v1/analyze_project", {
+        user_id: 1,
+        collection_name: params.collectionName,
+        focus: params.focus ?? null,
+    });
+    return data;
+}
+
+
+export async function reviewCode(params: {
+    collectionName: string;
+    code: string;
+    language?: string;
+    ruleset?: "default" | "security" | "style";
+}): Promise<{ collection_name: string; language: string; ruleset: string; review_markdown: string }> {
+    const { data } = await api.post("/api/v1/review_code", {
+        user_id: 1,
+        collection_name: params.collectionName,
+        code: params.code,
+        language: params.language ?? "python",
+        ruleset: params.ruleset ?? "default",
+    });
     return data;
 }

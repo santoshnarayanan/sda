@@ -1,9 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 import generationReducer from "./generationSlice";
+import analyzerReducer from "./analyzerSlice";
 
 export const store = configureStore({
   reducer: {
     generation: generationReducer,
+    analyzer: analyzerReducer,
   },
 });
 

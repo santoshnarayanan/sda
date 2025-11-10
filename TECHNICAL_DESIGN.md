@@ -1,105 +1,105 @@
-# 📘 Technical Design — Smart Developer Assistant (SDA) — Phase 3
-
-Phase 3 introduces two major functional enhancements on top of the Phase 2 RAG architecture:
-
-1. **Code Refactor Feature** – AI-powered code review, optimization, and docstring generation.  
-2. **History Module** – Persistent request logging and retrieval through a MUI DataGrid interface.
+# 📘 Technical Design — Smart Developer Assistant (SDA)
+## Phase 4: Multimodal + Project Analyzer Integration
 
 ---
 
-## 1. System Architecture Overview
-![System Architecture](images/Architecture_Phase3.png)
+## 1️⃣ Introduction
 
-**Highlights**
-- React + Redux frontend communicates with FastAPI endpoints:
-  - `/api/v1/generate`
-  - `/api/v1/refactor`
-  - `/api/v1/answer_from_docs`
-  - `/api/v1/history`
-- LangChain orchestrates model reasoning and RAG context retrieval.
-- Qdrant stores document embeddings for semantic search.
-- PostgreSQL holds user and request history data.
+This document outlines the technical design and implementation details for **Phase 4** of the **Smart Developer Assistant (SDA)** — aligning with the IBM course  
+**“Build Multimodal Generative AI Applications.”**
+
+The goal of this phase is to extend SDA beyond simple prompt-based or RAG-based responses to perform **project-level codebase analysis**, **architectural summarization**, and **code reviews** using multimodal input (text, code, and optional images).
 
 ---
 
-## 2. Backend Module Flow
-![Backend Flow](images/Backend_Phase3.png)
+## 2️⃣ System Overview
 
-**Components**
-- **`main.py`** — Defines FastAPI routes and handles request/response lifecycles.  
-- **`ai_service.py`** — Contains:
-  - `generate_content_with_llm()`
-  - `refactor_code_with_llm()`
-  - `answer_from_docs()`  
-- **`models.py`** — Pydantic request/response models.  
-- **`ingest.py`** — Converts docs → chunks → embeddings → Qdrant.  
-- **`.env`** — Holds API keys and database credentials.  
-- **Data Stores**
-  - **Qdrant:** vector collection `sda_dev_documentation`  
-  - **PostgreSQL:** tables `users`, `request_history`
+SDA now supports **multimodal project ingestion** and **intelligent code analysis**.
 
----
+### 🏗️ Updated System Architecture
+![Architecture Phase 4](./images/Architecture_Phase4.png)
 
-## 3. Frontend–API Integration
-![Frontend API Flow](images/Frontend-API_Phase3.png)
-
-**Key React Modules**
-- **`generationSlice.ts`** — Manages state (`prompt`, `output`, `mode`, `language`) and thunks  
-  `generateCode()` and `refactorCode()`.
-- **`GenerationArea.tsx`** — Input box + mode toggle (Generate / Refactor).  
-- **`OutputDisplay.tsx`** — Renders output or explanation markdown.  
-- **`HistoryTable.tsx`** — Displays request history; row click → reload prompt/output.
+#### Key Components:
+- **Frontend (React + Redux + Tailwind)**
+  - Adds new **Code Analyzer** module.
+  - Supports file uploads, progress feedback, and markdown-style summaries.
+- **Backend (FastAPI + LangChain + Qdrant)**
+  - Handles project ZIP uploads, embedding ingestion, and retrieval-based analysis.
+- **Databases**
+  - **Qdrant**: Stores vector embeddings for each uploaded project.
+  - **PostgreSQL**: Tracks `project_collections` metadata (project ↔ user).
+- **LLM Integration**
+  - Generates summaries, reviews, and refactoring suggestions using LangChain pipelines.
 
 ---
 
-## 4. Database Entity Model (ER)
-![Database ER](images/ER_Phase3.png)
+## 3️⃣ Backend Implementation
 
-**Active Tables**
-| Table | Description |
-|--------|--------------|
-| **users** | Stores user accounts and credentials. |
-| **request_history** | Logs every Generate / Refactor request with timestamps and metadata. |
+### 🔹 New Files and Endpoints
 
-**Future Extensions (Phase 4+)**
-- `user_settings` – personalization and default model preferences.  
-- `user_snippets` – reusable code blocks.
+#### 📄 `project_ingest.py`
+Handles unzipping, parsing, embedding, and indexing of uploaded project ZIPs.
 
----
+#### 📄 `ai_service.py`
+Added two new analysis methods:
+- `analyze_project_structure()`: Creates architecture summaries from Qdrant context.
+- `review_code_snippet()`: Performs code reviews with style/security recommendations.
 
-## 5. Runtime Sequence Flow
-![Sequence Flow](images/Sequence_Phase3.png)
+#### 📄 `main.py`
+Exposes new API endpoints:
+| Endpoint | Purpose |
+|-----------|----------|
+| `POST /api/v1/upload_project` | Upload and index a zipped project. |
+| `POST /api/v1/analyze_project` | Generate an architectural summary. |
+| `POST /api/v1/review_code` | Perform a code quality and security review. |
 
-**Generate Flow**
-1. User → Frontend: prompt input.  
-2. Frontend → FastAPI (`/generate`).  
-3. FastAPI → LangChain → Qdrant → LLM.  
-4. LLM response logged to PostgreSQL `request_history`.  
-5. Result → Frontend → Display.
-
-**Refactor Flow**
-1. User → Frontend: paste code + click Refactor.  
-2. Backend runs `refactor_code_with_llm()`.  
-3. Output (docstring + explanation) logged to DB and displayed.
-
-**History Flow**
-1. User opens History tab.  
-2. Frontend GET `/api/v1/history`.  
-3. Backend SELECT from `request_history`.  
-4. Data Grid renders rows (click to reload).
+![Backend Phase 4](./images/Backend-Phase4.png)
 
 ---
 
-## 6. Phase 3 Summary
-![Phase 3 Summary](images/Phase3diagram.png)
+### 🧩 Database Changes
 
-**End-to-End Flow**
-- **Frontend:** React + Redux UI ↔ FastAPI API.  
-- **Backend:** LangChain LLM processing and RAG context retrieval.  
-- **Data Layer:** Qdrant for semantic search + PostgreSQL for structured history.  
-- **New Capabilities:** Refactor endpoint + interactive History DataGrid.
+Added a new table `project_collections`:
 
----
+```sql
+CREATE TABLE project_collections (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    project_name TEXT,
+    qdrant_collection TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### Environment Configuration Notes
-**Frontend `.env`**
+```
+![ER Phase 4](./images/ER-Phase4.png)
+
+
+### ⚙️ Backend Architecture
+
+Process:
+
+Upload ZIP → FastAPI
+
+Extract + Split + Embed → Qdrant
+
+Store collection metadata → PostgreSQL
+
+LLM (via LangChain) performs:
+
+Summarization of modules, dependencies, and entry points.
+
+Review of code based on selected language and ruleset.
+
+![Sequence Phase 4](./images/Seq-Phase4.png)
+
+### 4️⃣ Frontend Implementation
+🧠 React Components Added
+Component	Purpose
+CodeAnalyzer.tsx	Main UI for project-level analysis and review.
+ProjectUpload.tsx	Uploads project ZIP with progress feedback.
+AnalysisDisplay.tsx	Renders architecture summary.
+CodeReviewPanel.tsx	Allows code review input and displays results.
+
+### Request Response Cycle
+
+![Sequence Phase 4](./images/Request-Response-Phase4.png)
