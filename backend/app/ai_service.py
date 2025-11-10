@@ -19,6 +19,10 @@ from .models import GenerationResponse, SourceChunk, DocQARequest
 
 load_dotenv()
 
+# --- File type categories ---
+CODE_EXTS = {".py", ".js", ".ts", ".tsx", ".jsx"}
+DOC_EXTS  = {".md", ".txt"}
+
 # --- Config ---
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
@@ -49,7 +53,8 @@ Keep it **specific** with line‑level suggestions where possible.
 
 # --- Initialize global components ---
 try:
-    llm = ChatOpenAI(model="gpt-3.5-turbo", api_key=OPENAI_API_KEY, temperature=0.2)
+    llm = ChatOpenAI(model="gpt-3.5-turbo",
+                     api_key=OPENAI_API_KEY, temperature=0.2)
 except Exception:
     llm = None
     print("Warning: OpenAI API key not found. Using mock LLM response.")
@@ -63,6 +68,24 @@ vector_store = Qdrant(
     content_payload_key="text",
 )
 
+
+def _guess_ext_from_source(meta: dict) -> str:
+    """Best-effort extension detection from metadata['source']."""
+    src = (meta or {}).get("source", "")
+    if not src:
+        return ""
+    _, ext = os.path.splitext(str(src).lower())
+    return ext
+
+
+def _looks_like_code(text: str) -> bool:
+    """Heuristic when extension is unknown."""
+    t = text[:800].lower()
+    signals = ["def ", "class ", "import ", "from ", "function ",
+               "const ", "let ", "=>", "interface ", "type "]
+    return any(s in t for s in signals)
+
+
 def _apply_filters(filters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     """Translate simple equality filters into Qdrant search_kwargs."""
     if not filters:
@@ -74,6 +97,7 @@ def _apply_filters(filters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]
         must.append({"key": key, "match": {"value": val}})
     return {"filter": {"must": must}}
 
+
 def _lexical_score(query: str, docs: List[str]) -> List[float]:
     tokens = [q.lower() for q in query.split()]
     corpus = [[w.lower() for w in d.split()] for d in docs]
@@ -82,8 +106,10 @@ def _lexical_score(query: str, docs: List[str]) -> List[float]:
     bm25 = BM25Okapi(corpus)
     return bm25.get_scores(tokens)
 
+
 def _fuzzy_boost(query: str, docs: List[str]) -> List[float]:
     return [partial_ratio(query, d) / 100.0 for d in docs]
+
 
 def _rerank(query: str, docs_payload: List[Tuple[str, Dict[str, Any], float]]) -> List[Tuple[str, Dict[str, Any], float]]:
     """
@@ -99,24 +125,31 @@ def _rerank(query: str, docs_payload: List[Tuple[str, Dict[str, Any], float]]) -
 
     # normalize & combine (simple weighted sum for Phase 2)
     def z(x: List[float]) -> List[float]:
-        if not x: return []
+        if not x:
+            return []
         lo, hi = min(x), max(x)
         if hi - lo < 1e-9:
             return [0.0 for _ in x]
         return [(v - lo) / (hi - lo) for v in x]
 
     zdense = z(dense)
-    zbm25  = z(bm25_scores)
-    zfuzz  = z(fuzz_scores)
+    zbm25 = z(bm25_scores)
+    zfuzz = z(fuzz_scores)
 
-    combined = [0.55*zd + 0.35*zb + 0.10*zf for zd, zb, zf in zip(zdense, zbm25, zfuzz)]
-    ranked = sorted(zip(texts, [p for _, p, _ in docs_payload], combined), key=lambda x: x[2], reverse=True)
+    combined = [0.55*zd + 0.35*zb + 0.10*zf for zd,
+                zb, zf in zip(zdense, zbm25, zfuzz)]
+    ranked = sorted(zip(texts, [p for _, p, _ in docs_payload],
+                    combined), key=lambda x: x[2], reverse=True)
     return ranked
 
+
 def _detect_language(hint: str, prompt: str) -> str:
-    if "python" in hint.lower() or "python" in prompt.lower(): return "python"
-    if "react" in hint.lower() or "javascript" in hint.lower(): return "jsx"
+    if "python" in hint.lower() or "python" in prompt.lower():
+        return "python"
+    if "react" in hint.lower() or "javascript" in hint.lower():
+        return "jsx"
     return "markdown"
+
 
 def answer_from_docs(req: DocQARequest) -> GenerationResponse:
     """
@@ -133,7 +166,8 @@ def answer_from_docs(req: DocQARequest) -> GenerationResponse:
         )
 
     # 1) Dense retrieval from Qdrant
-    retriever = vector_store.as_retriever(search_kwargs={"k": req.top_k, **(_apply_filters(req.filters) or {})})
+    retriever = vector_store.as_retriever(
+        search_kwargs={"k": req.top_k, **(_apply_filters(req.filters) or {})})
     docs = retriever.invoke(req.prompt_text)
 
     # Prepare payloads
@@ -144,13 +178,16 @@ def answer_from_docs(req: DocQARequest) -> GenerationResponse:
         # LangChain doesn't give us raw scores directly — we approximate with similarity to the query embedding
         # Compute a cosine similarity proxy via embeddings (lightweight)
         qv = embeddings.embed_query(req.prompt_text)
-        dv = embeddings.embed_query(d.page_content)  # cheaper than embed_documents for single use
+        # cheaper than embed_documents for single use
+        dv = embeddings.embed_query(d.page_content)
         # cosine
         import numpy as np
-        sim = float(np.dot(qv, dv) / (np.linalg.norm(qv) * np.linalg.norm(dv) + 1e-9))
+        sim = float(np.dot(qv, dv) / (np.linalg.norm(qv)
+                    * np.linalg.norm(dv) + 1e-9))
         dense_payload.append((d.page_content, payload, sim))
 
-    ranked = _rerank(req.prompt_text, dense_payload) if req.rerank else [(t, p, s) for (t, p, s) in dense_payload]
+    ranked = _rerank(req.prompt_text, dense_payload) if req.rerank else [
+        (t, p, s) for (t, p, s) in dense_payload]
 
     # Build context & sources (cap to 4 chunks to control prompt size)
     top_ctx = ranked[:4]
@@ -170,7 +207,8 @@ def answer_from_docs(req: DocQARequest) -> GenerationResponse:
     prompt = ChatPromptTemplate.from_messages(
         [
             SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=f"CONTEXT:\n---\n" + "\n---\n".join(context_blocks) + "\n---\n\nQUESTION: " + req.prompt_text),
+            HumanMessage(content=f"CONTEXT:\n---\n" + "\n---\n".join(
+                context_blocks) + "\n---\n\nQUESTION: " + req.prompt_text),
         ]
     )
     try:
@@ -182,17 +220,22 @@ def answer_from_docs(req: DocQARequest) -> GenerationResponse:
 
     return GenerationResponse(
         generated_content=content,
-        content_language=_detect_language(req.content_language, req.prompt_text),
+        content_language=_detect_language(
+            req.content_language, req.prompt_text),
         request_type="docs_qa",
         sources=sources,
     )
 
 # Backward‐compat (Phase 1 endpoint still calls this function)
+
+
 def generate_content_with_llm(prompt: str, language: str) -> GenerationResponse:
     # Keep the existing behavior for /generate; we don't change it in Phase 2
     # This path used RAG light already; we leave as-is to avoid breaking.
-    req = DocQARequest(prompt_text=prompt, top_k=2, rerank=False, filters=None, content_language=language)
+    req = DocQARequest(prompt_text=prompt, top_k=2, rerank=False,
+                       filters=None, content_language=language)
     return answer_from_docs(req)
+
 
 def refactor_code_with_llm(code: str, language: str) -> GenerationResponse:
     """
@@ -235,7 +278,8 @@ def refactor_code_with_llm(code: str, language: str) -> GenerationResponse:
         # Split the code and explanation if AI follows the format
         parts = full_response.split("## Explanation", 1)
         refactored_code = parts[0].replace("## Refactored Code", "").strip()
-        explanation = parts[1].strip() if len(parts) > 1 else "No detailed explanation provided."
+        explanation = parts[1].strip() if len(
+            parts) > 1 else "No detailed explanation provided."
 
     except Exception as e:
         refactored_code = f"Error: {e}"
@@ -256,45 +300,103 @@ def _make_vector_store_for_collection(collection_name: str) -> Qdrant:
 
 
 def analyze_project_structure(collection_name: str, focus: str | None = None) -> str:
+    """
+    Generates an architecture summary for the given project collection.
+    Retrieves and classifies both code (.py, .ts, .tsx, .js, .jsx) and docs (.md, .txt)
+    even when 'file_ext' is missing in metadata, by falling back to source filename
+    or simple content heuristics.
+    """
     vs = _make_vector_store_for_collection(collection_name)
-    retriever = vs.as_retriever(search_kwargs={"k": 6})
-    # Pull a broad cross‑section of the codebase
-    docs = retriever.invoke(f"project {collection_name} {focus or ''}")
-    context = "\n\n".join(d.page_content for d in docs)
 
+    # Pull a generous cross-section (two queries merged) to avoid doc-only results.
+    retriever = vs.as_retriever(search_kwargs={"k": 24})
+
+    query_code = f"architecture modules imports classes functions components dependencies {focus or ''}"
+    query_docs = f"readme overview setup usage api documentation {focus or ''}"
+
+    docs_a = retriever.invoke(query_code) or []
+    docs_b = retriever.invoke(query_docs) or []
+    docs = docs_a + [d for d in docs_b if d not in docs_a]
+
+    if not docs:
+        return "No project data found. Try re-uploading or re-ingesting the project ZIP."
+
+    code_docs, doc_docs = [], []
+
+    for d in docs:
+        meta = dict(getattr(d, "metadata", {}) or {})
+        # prefer explicit 'file_ext'; otherwise derive from 'source' or heuristics
+        ext = meta.get("file_ext", "")
+        ext = ext.lower() if isinstance(ext, str) else ""
+        if not ext:
+            ext = _guess_ext_from_source(meta)
+
+        if ext in CODE_EXTS:
+            code_docs.append(d)
+        elif ext in DOC_EXTS:
+            doc_docs.append(d)
+        else:
+            # Fallback: classify by content if extension is unknown or uncommon
+            if _looks_like_code(d.page_content):
+                code_docs.append(d)
+            else:
+                doc_docs.append(d)
+
+    # Build contexts (cap to keep prompts stable)
+    code_context = "\n\n".join(d.page_content for d in code_docs[:10])
+    doc_context = "\n\n".join(d.page_content for d in doc_docs[:8])
+
+    if not code_context and not doc_context:
+        # Final fallback: take whatever we got to avoid empty output
+        mixed = "\n\n".join(d.page_content for d in docs[:12])
+        doc_context = mixed
 
     prompt = ChatPromptTemplate.from_messages([
-    SystemMessage(content=ANALYZE_SYSTEM),
-    HumanMessage(content=(
-    f"Context (snippets from project '{collection_name}'):\n---\n{context}\n---\n"
-    f"Focus: {focus or 'general'}\n"
-    f"Task: Produce a clear architecture summary with components, dependencies, entrypoints, and risks."
-    ))
+        SystemMessage(content=ANALYZE_SYSTEM),
+        HumanMessage(content=(
+            f"## Documentation Context\n---\n{doc_context or 'N/A'}\n\n"
+            f"## Code Context\n---\n{code_context or 'N/A'}\n\n"
+            f"Focus: {focus or 'general'}\n\n"
+            "Task: Produce a detailed architecture summary including:\n"
+            "- Key modules, classes/components, and responsibilities\n"
+            "- Data and control flow\n"
+            "- External dependencies/services and where they are used\n"
+            "- Likely entrypoints (APIs, CLIs, main files) and initialization order\n"
+            "- Risks / tech debt / missing tests"
+        ))
     ])
-
 
     try:
         result = (prompt | llm).invoke({"input": "analyze"})
         return result.content
     except Exception as e:
         return f"Analysis failed: {e}"
-    
 
-def review_code_snippet(collection_name: str, code: str, language: str = "python", ruleset: str = "default") -> str:
+
+def review_code_snippet(collection_name: str, code: str, language: str="python", ruleset: str="default") -> str:
     vs = _make_vector_store_for_collection(collection_name)
-    retriever = vs.as_retriever(search_kwargs={"k": 4})
-    # Guide retrieval with filename hints when possible
-    hint = {
-    "python": "py",
-    "javascript": "js",
-    "typescript": "ts",
-    "jsx": "jsx",
-    "tsx": "tsx",
-    }.get(language.lower(), "code")
+    retriever = vs.as_retriever(search_kwargs={"k": 12})
 
+    lang_hint = {
+        "python": "py",
+        "javascript": "js",
+        "typescript": "ts",
+        "jsx": "jsx",
+        "tsx": "tsx",
+    }.get(language.lower(), "")
 
-    docs = retriever.invoke(f"{hint} {ruleset} security style best practices")
-    context = "\n\n".join(d.page_content for d in docs)
+    query = f"{lang_hint} modules functions imports security lint style best practices {ruleset}"
+    docs = retriever.invoke(query) or []
+
+    # keep only likely code chunks when possible
+    filtered = []
+    for d in docs:
+        meta = dict(getattr(d, "metadata", {}) or {})
+        ext = (meta.get("file_ext") or _guess_ext_from_source(meta) or "").lower()
+        if ext in CODE_EXTS or _looks_like_code(d.page_content):
+            filtered.append(d)
+
+    context = "\n\n".join(d.page_content for d in (filtered or docs)[:10])
 
     prompt = ChatPromptTemplate.from_messages([
         SystemMessage(content=REVIEW_SYSTEM),
@@ -303,9 +405,8 @@ def review_code_snippet(collection_name: str, code: str, language: str = "python
             f"Language: {language}\nRuleset: {ruleset}\n\n"
             f"Code to review:\n```{language}\n{code}\n```\n\n"
             f"Provide issues, improvements, and concrete patches."
-            ))
+        ))
     ])
-
 
     try:
         result = (prompt | llm).invoke({"input": "review"})
