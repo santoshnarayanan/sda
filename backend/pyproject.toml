@@ -4,16 +4,13 @@ name = "smart-dev-assistant-backend"
 version = "0.1.0"
 description = "FastAPI backend for SDA"
 authors = [{ name = "Santosh Narayanan", email = "santosh33@gmail.com" }]
-# Define ALL required application dependencies here as a simple list
+
 dependencies = [
     "fastapi",
     "pydantic",
-    "langchain",
     "python-dotenv",
     "psycopg2-binary",
     "sqlmodel",
-    "langchain-community",
-    "langchain-openai",
     "qdrant-client",
     "sentence-transformers",
     "rank-bm25",
@@ -21,14 +18,28 @@ dependencies = [
     "uvicorn[standard]",
     "pillow",
     "python-multipart",
-    "langchain-core",
     "langchainhub",
     "langchain-experimental",
-    "openai-whisper"
-
+    "openai-whisper",
+    "langchain",
+    "langchain-community",
+    "langchain-openai",
+    "langchain-text-splitters",
+    "httpx",
+    "requests",
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "torch",
+    "transformers",
+    "tiktoken",
+    "huggingface-hub",
+    "anyio",
+    "click",
+    "jinja2",
+    "packaging",
 ]
 
-# This section is needed to tell Python how to build the project
 [build-system]
 requires = ["setuptools>=61.0.0"]
 build-backend = "setuptools.build_meta"

@@ -4,7 +4,8 @@ import GenerationArea from "./components/GenerationArea";
 import OutputDisplay from "./components/OutputDisplay";
 import HistoryTable from "./components/HistoryTable";
 import CodeAnalyzer from "./components/CodeAnalyzer";
-import {useState } from "react";
+import ChatPage from "./components/ChatPage";
+import { useState } from "react";
 /**
  * Lightweight app-level tabs with Tailwind.
  * We keep "reloaded from history" output in local state so we don't need to
@@ -12,7 +13,7 @@ import {useState } from "react";
  */
 
 function AppShell() {
-  const [tab, setTab] = useState<"generate" | "analyze">("generate");
+  const [tab, setTab] = useState<"generate" | "analyze" | "chat">("generate");
 
 
   return (
@@ -22,24 +23,37 @@ function AppShell() {
           <h1 className="text-xl font-bold">Smart Developer Assistant</h1>
           <nav className="flex gap-2">
             <button
-              className={`rounded-2xl px-4 py-2 text-sm ${tab === "generate" ? "bg-blue-600 text-white" : "bg-gray-100"}`}
+              className={`rounded-2xl px-4 py-2 text-sm ${
+                tab === "generate" ? "bg-blue-600 text-white" : "bg-gray-100"
+              }`}
               onClick={() => setTab("generate")}
             >
               Generate
             </button>
             <button
-              className={`rounded-2xl px-4 py-2 text-sm ${tab === "analyze" ? "bg-blue-600 text-white" : "bg-gray-100"}`}
+              className={`rounded-2xl px-4 py-2 text-sm ${
+                tab === "analyze" ? "bg-blue-600 text-white" : "bg-gray-100"
+              }`}
               onClick={() => setTab("analyze")}
             >
               Code Analyzer
+            </button>
+            <button
+              className={`rounded-2xl px-4 py-2 text-sm ${
+                tab === "chat" ? "bg-blue-600 text-white" : "bg-gray-100"
+              }`}
+              onClick={() => setTab("chat")}
+            >
+              Chat
             </button>
           </nav>
         </div>
       </header>
 
-
       <main className="mx-auto max-w-6xl p-4">
-        {tab === "generate" ? (
+        {tab === "chat" ? (
+          <ChatPage />
+        ) : tab === "generate" ? (
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <GenerationArea />

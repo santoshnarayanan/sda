@@ -1,5 +1,3 @@
-# app/main.py
-
 import os
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +16,10 @@ from .ai_service import generate_content_with_llm, answer_from_docs, refactor_co
 from ingest import upsert_documents
 from .project_ingest import ingest_project_zip
 from .speech_service import router as speech_router
+from .api import chat,snippets,settings
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # --- Config ---
 TEST_USER_ID = 1  # Phase 1 simplification
@@ -42,6 +44,9 @@ app.add_middleware(
 )
 
 app.include_router(speech_router)
+app.include_router(chat.router)
+app.include_router(snippets.router)
+app.include_router(settings.router)
 
 def get_db_connection():
     try:

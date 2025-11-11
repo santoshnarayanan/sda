@@ -1,7 +1,9 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, JSON, func
+from sqlalchemy.orm import relationship, declarative_base
+Base = declarative_base()
 # --- Requests ---
 
 class CodeGenerationRequest(BaseModel):
@@ -109,3 +111,36 @@ class ReviewCodeResponse(BaseModel):
     language: str
     ruleset: str
     review_markdown: str
+    
+
+class ChatHistory(Base):
+    __tablename__ = "chat_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    session_id = Column(String, index=True)
+    user_message = Column(Text)
+    ai_response = Column(Text)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, unique=True)
+    preferred_model = Column(String, default="gpt-4")
+    language = Column(String, default="English")
+    tone = Column(String, default="neutral")
+    custom_system_prompt = Column(Text, nullable=True)
+    last_updated = Column(DateTime(timezone=True), server_default=func.now())
+
+class UserSnippet(Base):
+    __tablename__ = "user_snippets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    title = Column(String)
+    language = Column(String)
+    code = Column(Text)
+    notes = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

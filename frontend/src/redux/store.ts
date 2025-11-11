@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import generationReducer from "./generationSlice";
 import analyzerReducer from "./analyzerSlice";
+import chatReducer from "./chatSlice";
 
 export const store = configureStore({
   reducer: {
     generation: generationReducer,
     analyzer: analyzerReducer,
+    chat: chatReducer,
   },
 });
 

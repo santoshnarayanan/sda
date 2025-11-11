@@ -64,3 +64,5 @@ export async function reviewCode(params: {
     });
     return data;
 }
+
+export default api;
