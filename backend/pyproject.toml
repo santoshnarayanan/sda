@@ -38,8 +38,16 @@ dependencies = [
     "click",
     "jinja2",
     "packaging",
+    "jupyter>=1.1.1",
 ]
+
+[tool.setuptools.packages.find]
+where = ["app"]
+include = ["app*"]
+exclude = ["data", "build"]
+
 
 [build-system]
 requires = ["setuptools>=61.0.0"]
 build-backend = "setuptools.build_meta"
+

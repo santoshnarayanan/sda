@@ -125,7 +125,7 @@ def _rerank(query: str, docs_payload: List[Tuple[str, Dict[str, Any], float]]) -
 
     # normalize & combine (simple weighted sum for Phase 2)
     def z(x: List[float]) -> List[float]:
-        if not x:
+        if x is None or len(x) == 0:
             return []
         lo, hi = min(x), max(x)
         if hi - lo < 1e-9:
