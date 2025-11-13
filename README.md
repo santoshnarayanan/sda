@@ -1,9 +1,9 @@
-🚀 Smart Developer Assistant (SDA)
+# 🚀 Smart Developer Assistant (SDA)
 
 AI-powered development assistant with RAG, multi-modal input, code analysis, project understanding, and conversational chat.
 Built with FastAPI, React, LangChain 1.x, Qdrant Cloud, OpenAI GPT-4o models, and Whisper Speech-to-Text.
 
-🧠 Overview
+## 🧠 Overview
 
 Smart Developer Assistant (SDA) is a modular, full-stack AI system designed to boost developer productivity.
 It supports:
@@ -53,7 +53,7 @@ User settings & favorite snippets
 - Model caching & batching
 - Worker queue (Celery/RQ)
 
-🏗️ System Architecture
+## 🏗️ System Architecture
 High-Level Architecture
 ![Archiecture](./images/HL-Diagram.png)
 Backend Components
@@ -82,7 +82,7 @@ Located in frontend/src/:
 - Tailwind styling
 
 
-📦 Project Structure
+## 📦 Project Structure
 ```
 sda/
 ├── backend/
@@ -108,7 +108,7 @@ sda/
 
 ```
 
-🗄️ Data Storage
+## 🗄️ Data Storage
 PostgreSQL (Structured)
 
 - request_history
@@ -140,7 +140,7 @@ Backend:
 - openai-whisper to transcribe
 - Mapped to chat text input
 
-⚙️ Installation
+## ⚙️ Installation
 Prerequisites
 
 - Python 3.12+
@@ -183,7 +183,7 @@ DB_USER=postgres
 DB_PASSWORD=yourpassword
 
 ```
-🔌 Key Endpoints
+## 🔌 Key Endpoints
 | Endpoint                   | Purpose                      |
 | -------------------------- | ---------------------------- |
 | `/api/chat`                | Phase-5 conversational agent |
@@ -194,7 +194,7 @@ DB_PASSWORD=yourpassword
 | `/api/v1/review_code`      | LLM-powered code review      |
 | `/api/v1/transcribe_audio` | Speech-to-text               |
 
-🧠 Technology Stack
+## 🧠 Technology Stack
 Backend
 
 - FastAPI
