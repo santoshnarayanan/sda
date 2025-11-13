@@ -1,143 +1,217 @@
-# 🧠 Smart Developer Assistant (SDA)
+🚀 Smart Developer Assistant (SDA)
 
-The **Smart Developer Assistant (SDA)** is a modern, full-stack web application designed to accelerate the development workflow by providing intelligent, context-aware code generation and technical answers.
+AI-powered development assistant with RAG, multi-modal input, code analysis, project understanding, and conversational chat.
+Built with FastAPI, React, LangChain 1.x, Qdrant Cloud, OpenAI GPT-4o models, and Whisper Speech-to-Text.
 
-It demonstrates a robust, decoupled architecture leveraging the power of **Retrieval-Augmented Generation (RAG)** to guide its responses based on custom documentation.
+🧠 Overview
 
----
+Smart Developer Assistant (SDA) is a modular, full-stack AI system designed to boost developer productivity.
+It supports:
 
-## ✨ Features (Phase 2 Complete)
+- Intelligent chat with memory.
+- Document & project RAG search
+- Code review and debugging
+- Project ZIP ingestion & analysis
+- Speech-to-text via Whisper
+- User history, settings, and code snippet storage
+- SDA is implemented using industry-grade GenAI patterns, following - guidance from IBM’s Agentic AI and Machine Learning Engineer certification tracks.
 
-- 🧠 **Intelligent RAG** – Answers project-specific questions using documentation embedded and indexed in Qdrant.  
-- 💡 **Code Generation** – Generates new code snippets, explanations, and fixes via an OpenAI LLM.  
-- 🧾 **Context Traceability** – Displays document *sources*, chunk IDs, and similarity scores for each answer.  
-- 🔒 **Secure Ingestion** – Backend endpoint `/api/v1/upload_docs` protected by `X-Internal-Key` for controlled knowledge-base updates.  
-- 🪄 **Modern UI Toggle** – Switch seamlessly between *Code* and *Docs Q&A* modes.  
-- 🧩 **Full-Stack Auditability** – Every request and AI response logged in PostgreSQL.  
-- 🎨 **Modern Design** – React + Tailwind CSS UI, MUI DataGrid for history.  
 
----
+✨ Core Features (Phase 1–5)
+🔹 Phase 1 – Basic Chat & History
+- Simple conversational AI using OpenAI GPT models
+- Stores request history in PostgreSQL
+- Frontend chat UI built with React + Tailwind
 
-## 💻 Technology Stack
+🔹 Phase 2 – RAG Search Across Uploaded Docs
+- Users upload PDFs/Markdown
+- Documents embedded via OpenAI embeddings
+- Stored in Qdrant Cloud collection: project_docs
+- Query handled via hybrid retrieval (vector + ranking)
 
-| Component | Technology | Role |
-|------------|-------------|------|
-| **Frontend (UI)** | React + Redux + TypeScript | Component architecture and state management |
-| **Styling** | Tailwind CSS + PostCSS | Utility-first styling |
-| **Backend (API)** | Python + FastAPI | Asynchronous REST API |
-| **AI Orchestration** | LangChain | LLM prompt chaining and retrieval |
-| **Vector DB** | Qdrant (Cloud) | Stores embeddings of docs |
-| **Relational DB** | PostgreSQL | Persists user and history data |
+🔹 Phase 3 – Code Upload & Analysis
+- Upload ZIP project
+- Extract, chunk, embed code files
+- Create per-project Qdrant collections
+- LLM-powered project overview generation
 
----
+🔹 Phase 4 – Speech Input
+- Microphone recording in frontend
+- Whisper model converts audio → text
+- Text fed directly into the chat endpoint
 
-## 🚀 Getting Started
+🔹 Phase 5 – Conversational Chat + Persistent State
+- Multi-turn chat with history (stored in PostgreSQL)
+- Qdrant Cloud + LangChain 1.x Runnable pipelines
+- Code review endpoint
 
-### Prerequisites
+User settings & favorite snippets
 
-- **Python 3.10+**, **Node.js 18+**, **uv** (package manager)  
-- **PostgreSQL** (local or remote)  
-- **Qdrant Cloud cluster** (with API key)  
-- **OpenAI API key**
+🚀 Future (Phase 6)
+- Agentic multi-tool workflows
+- Deployment on GCP/AWS
+- Model caching & batching
+- Worker queue (Celery/RQ)
 
----
+🏗️ System Architecture
+High-Level Architecture
+![Archiecture](./images/HL-Diagram.png)
+Backend Components
 
-### 🗂️ Project Structure
+FastAPI app under /backend/app
 
-```bash
+Routers:
+
+- /api/v1/generate
+- /api/v1/answer_from_docs
+- /api/v1/upload_project
+- /api/v1/analyze_project
+- /api/v1/review_code
+- /api/chat
+- /api/v1/transcribe_audio
+
+Uses LangChain Core, LangChain Qdrant, Runnable components
+
+Frontend Components
+
+Located in frontend/src/:
+
+- App.tsx – layout
+- lib/api.ts – API client
+- components/* – chat, analyzers, uploaders
+- Tailwind styling
+
+
+📦 Project Structure
+```
 sda/
-sda/
-├── README.md
-├── TECHNICAL_DESIGN.md
 ├── backend/
 │   ├── app/
-│   ├── docs/
-│   └── ingest.py
-└── frontend/
-    ├── src/
-    └── package.json
+│   │   ├── api/
+│   │   │   ├── chat.py
+│   │   │   ├── snippets.py
+│   │   │   ├── settings.py
+│   │   ├── ai_service.py
+│   │   ├── project_ingest.py
+│   │   ├── database.py
+│   │   ├── init_db.py
+│   │   └── main.py
+│   ├── ingest.py
+│   ├── phase5_ingest.py
+│   ├── pyproject.toml
+│   └── ...
+├── frontend/
+│   ├── src/
+│   ├── package.json
+│   └── ...
+└── README.md
+
 ```
 
----
+🗄️ Data Storage
+PostgreSQL (Structured)
 
-## ⚙️ Setup and Run
+- request_history
+- chat_history
+- user_settings
+- user_snippets
+- project_collections
 
-### 🧩 Backend Setup
+### Qdrant Cloud (Vector)
 
-Navigate to the `backend/` directory.
+Collections:
 
-#### 1. Install Python dependencies
+- project_docs
+- project_{user}_{timestamp} for project uploads
 
-```bash
+Embeddings:
+
+- text-embedding-3-small (1536 dimensions)
+
+🔊 Speech-to-Text (Whisper)
+
+Frontend:
+
+- Mic recording
+- Sends .webm → /api/v1/transcribe_audio
+
+Backend:
+
+- openai-whisper to transcribe
+- Mapped to chat text input
+
+⚙️ Installation
+Prerequisites
+
+- Python 3.12+
+- Node.js 20+
+- PostgreSQL running locally
+- Qdrant Cloud account (Free Tier OK)
+
+Backend Setup
+```
+cd backend
+uv venv .venv
+source .venv/bin/activate
 uv pip install -r requirements.txt
-uv pip install langchain-core qdrant-client sentence-transformers
+
 ```
 
-#### 2. Configure Secrets
+Run backend:
+```
+uvicorn app.main:app --reload
+```
+Frontend Setup
+```
+cd frontend
+npm install
+npm run dev
 
-Create a `.env` file in `backend/` and populate it with:
+```
 
-```env
-# Database
+🧬 Environment Variables
+
+Create /backend/.env:
+```
+OPENAI_API_KEY=your_key
+QDRANT_URL=https://YOUR.qdrant.cloud
+QDRANT_API_KEY=your_qdrant_key
+
 DB_HOST=localhost
 DB_NAME=sda_dev_db
 DB_USER=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=yourpassword
 
-# Qdrant
-QDRANT_URL=https://<your-cluster>.cloud.qdrant.io
-QDRANT_API_KEY=<your_qdrant_key>
-
-# OpenAI
-OPENAI_API_KEY=<your_openai_key>
-
-# Internal upload key
-INTERNAL_INGEST_KEY=super-secret-key-dev
 ```
+🔌 Key Endpoints
+| Endpoint                   | Purpose                      |
+| -------------------------- | ---------------------------- |
+| `/api/chat`                | Phase-5 conversational agent |
+| `/api/v1/generate`         | General AI generation        |
+| `/api/v1/answer_from_docs` | RAG Docs Q&A                 |
+| `/api/v1/upload_project`   | ZIP ingestion                |
+| `/api/v1/analyze_project`  | Project architecture summary |
+| `/api/v1/review_code`      | LLM-powered code review      |
+| `/api/v1/transcribe_audio` | Speech-to-text               |
 
-#### 3. Initialize Database
+🧠 Technology Stack
+Backend
 
-Create the PostgreSQL database and manually run the Phase 1 SQL schemas.
+- FastAPI
+- LangChain Core 1.x
+- LangChain Qdrant
+- Qdrant Cloud
+- PostgreSQL
+- Whisper ASR
+- OpenAI GPT-4o
 
-#### 4. Populate Qdrant (RAG Data)
+Frontend
 
-```bash
-python ingest.py
-```
+- React + Vite
+- TailwindCSS
+- Redux state
+- Axios
 
-#### 5. Run the Backend Server
-
-```bash
-uvicorn app.main:app --reload
-```
-
----
-
-### 💻 Frontend Setup
-
-Navigate to the `frontend/` directory.
-
-#### 1. Install Node dependencies
-
-```bash
-npm install
-```
-
-#### 2. Run the Frontend Server
-
-```bash
-npm run dev
-```
-
-Access the app at: [http://localhost:5173](http://localhost:5173)
-
----
-
-## 📜 License
-
-This project is licensed under the [MIT License](./LICENSE.md).
-
----
 
 ## 🙏 Acknowledgements
 
