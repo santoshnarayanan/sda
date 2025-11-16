@@ -1,4 +1,4 @@
-// frontend/src/components/ModeToggle.tsx
+            // frontend/src/components/ModeToggle.tsx
 // Phase 2 – UI toggle between Code and Docs Q&A modes
 // ----------------------------------------------------
 
@@ -26,16 +26,16 @@ export default function ModeToggle() {
     <div className="inline-flex gap-2 bg-white p-1 rounded-2xl shadow-sm">
       <button
         type="button"
-        className={`${base} ${mode === "code" ? active : inactive}`}
-        onClick={() => handleClick("code")}
+        className={`${base} ${mode === "generate" ? active : inactive}`}
+        onClick={() => handleClick("generate")}
       >
         Code
       </button>
 
       <button
         type="button"
-        className={`${base} ${mode === "docs" ? active : inactive}`}
-        onClick={() => handleClick("docs")}
+        className={`${base} ${mode === "refactor" ? active : inactive}`}
+        onClick={() => handleClick("refactor")}
       >
         Docs Q&A
       </button>

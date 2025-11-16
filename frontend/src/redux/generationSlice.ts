@@ -4,6 +4,8 @@ axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || "";
 
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 
+/** Mode type */
+export type Mode = "generate" | "refactor";
 
 /** Slice state */
 interface GenerationState {
