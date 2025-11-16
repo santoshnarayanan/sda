@@ -17,7 +17,11 @@ from .models import (
     GithubLoginUrlResponse, GithubAuthCompleteRequest,
     GithubReposResponse, ImportRepoRequest, ImportRepoResponse,
     GithubAuthCompleteResponse, GithubRepo,
+    AgentRunRequest, AgentRunResponse,
 )
+
+# Agent manager
+from .agents.manager import run_agent_task
 
 # Internal modules
 from .ai_service import (
@@ -385,6 +389,26 @@ async def review_code(req: ReviewCodeRequest):
         ruleset=req.ruleset or "default",
         review_markdown=review,
     )
+    
+@app.post("/api/v1/agent_run", response_model=AgentRunResponse)
+async def agent_run(req: AgentRunRequest):
+    """
+    Phase 6 Part 2: Multi-Agent System entrypoint.
+
+    task_type:
+      - 'analyze_architecture'
+      - 'refactor_code'
+      - 'generate_deployment'
+      - 'repo_overview'
+    """
+    try:
+        # For now we trust req.collection_name is correct if provided.
+        result = run_agent_task(req)
+        return result
+    except Exception as e:
+        print(f"[AgentRun] Error while executing agent graph: {e}")
+        raise HTTPException(status_code=500, detail="Agent execution failed")
+
 
 @app.get("/api/v1/auth/github/login_url", response_model=GithubLoginUrlResponse)
 async def github_login_url(state: str = Query("sda-demo", description="Opaque state for CSRF protection")):

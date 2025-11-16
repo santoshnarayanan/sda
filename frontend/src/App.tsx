@@ -5,6 +5,7 @@ import OutputDisplay from "./components/OutputDisplay";
 import HistoryTable from "./components/HistoryTable";
 import CodeAnalyzer from "./components/CodeAnalyzer";
 import GithubIntegration from "./components/GithubIntegration";
+import AgentWorkspace from "./components/AgentWorkspace";
 import ChatPage from "./components/ChatPage";
 import { useState } from "react";
 /**
@@ -14,7 +15,8 @@ import { useState } from "react";
  */
 
 function AppShell() {
-  const [tab, setTab] = useState<"generate" | "analyze" | "github">("generate");
+  // const [tab, setTab] = useState<"generate" | "analyze" | "github">("generate");
+  const [tab, setTab] = useState<"generate" | "analyze" | "github" | "agent">("generate");
 
 
   return (
@@ -47,6 +49,14 @@ function AppShell() {
             >
               GitHub
             </button>
+            <button
+              className={`rounded-2xl px-4 py-2 text-sm ${
+                tab === "agent" ? "bg-blue-600 text-white" : "bg-gray-100"
+              }`}
+              onClick={() => setTab("agent")}
+            >
+              Agent Workspace
+            </button>
           </nav>
         </div>
       </header>
@@ -64,8 +74,10 @@ function AppShell() {
           </div>
         ) : tab === "analyze" ? (
           <CodeAnalyzer />
-        ) : (
+        ) : tab === "github" ? (
           <GithubIntegration />
+        ) : (
+          <AgentWorkspace />
         )}
       </main>
     </div>

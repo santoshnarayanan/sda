@@ -130,5 +130,50 @@ export async function importGithubRepo(
     return data;
 }
 
+// ---------------- Phase 6 Part 2 – Agentic AI ----------------
+
+export type AgentToolCall = {
+  tool_name: string;
+  input: Record<string, unknown>;
+  output?: string;
+  status: string;
+  started_at?: string;
+  finished_at?: string;
+};
+
+export type AgentStep = {
+  step_name: string;
+  agent: string;
+  summary: string;
+  tool_calls: AgentToolCall[];
+};
+
+export type AgentRunResponse = {
+  task_type: string;
+  collection_name?: string | null;
+  final_answer_markdown: string;
+  steps: AgentStep[];
+};
+
+export async function runAgentTask(params: {
+  taskType: "analyze_architecture" | "refactor_code" | "generate_deployment" | "repo_overview";
+  collectionName?: string | null;
+  userQuery?: string | null;
+  codeSnippet?: string | null;
+  language?: string;
+}): Promise<AgentRunResponse> {
+  const payload = {
+    task_type: params.taskType,
+    collection_name: params.collectionName ?? null,
+    user_query: params.userQuery ?? null,
+    code_snippet: params.codeSnippet ?? null,
+    language: params.language ?? "python",
+  };
+
+  const { data } = await api.post<AgentRunResponse>("/api/v1/agent_run", payload);
+  return data;
+}
+
+
 
 export default api;

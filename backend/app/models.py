@@ -191,3 +191,51 @@ class ImportRepoResponse(BaseModel):
     qdrant_collection: str
     files_indexed: int
     chunks_indexed: int
+    
+class AgentToolCall(BaseModel):
+    tool_name: str
+    input: Dict[str, Any]
+    output: Optional[str] = None
+    status: str = "completed"
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+
+
+class AgentStep(BaseModel):
+    step_name: str
+    agent: str
+    summary: str
+    tool_calls: List[AgentToolCall] = []
+
+
+class AgentRunRequest(BaseModel):
+    task_type: str = Field(
+        ...,
+        description=(
+            "Type of task: 'analyze_architecture', 'refactor_code', "
+            "'generate_deployment', or 'repo_overview'."
+        ),
+    )
+    collection_name: Optional[str] = Field(
+        None,
+        description="Qdrant collection name for the project/repository.",
+    )
+    user_query: Optional[str] = Field(
+        None,
+        description="High-level question or instruction for the agent.",
+    )
+    code_snippet: Optional[str] = Field(
+        None,
+        description="Optional code snippet for refactor/review tasks.",
+    )
+    language: Optional[str] = Field(
+        "python",
+        description="Programming language for code-related tasks.",
+    )
+
+
+class AgentRunResponse(BaseModel):
+    task_type: str
+    collection_name: Optional[str]
+    final_answer_markdown: str
+    steps: List[AgentStep]
