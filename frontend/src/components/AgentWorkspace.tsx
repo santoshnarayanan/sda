@@ -74,6 +74,14 @@ export default function AgentWorkspace() {
               <option value="refactor_code">Refactor / Review Code</option>
               <option value="generate_deployment">Generate Deployment Config</option>
             </select>
+            {taskType === "generate_deployment" && (
+              <p className="mt-2 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-xl p-2">
+                <strong>Hint:</strong> If the DevOps Agent detects multiple runtimes (e.g. Python + Node.js),
+                it will ask you which service to target.
+                Update the task description with your choice (e.g. “Generate deployment for the Python backend only”)
+                and click <strong>Run Agent</strong> again.
+              </p>
+            )}
           </div>
 
           <div className="w-full sm:flex-1">
@@ -141,9 +149,8 @@ export default function AgentWorkspace() {
         <button
           onClick={handleRun}
           disabled={loading}
-          className={`mt-2 rounded-2xl px-4 py-2 text-sm font-medium text-white shadow ${
-            loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-          }`}
+          className={`mt-2 rounded-2xl px-4 py-2 text-sm font-medium text-white shadow ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+            }`}
         >
           {loading ? "Running agent..." : "Run Agent"}
         </button>
