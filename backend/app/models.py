@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, JSON, func
-from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy import Column, Integer, String, Text, DateTime, JSON, func
+from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 # --- Requests ---
 
@@ -144,3 +144,50 @@ class UserSnippet(Base):
     code = Column(Text)
     notes = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# --- GitHub OAuth / Repo Models (Phase 6) ---
+
+class GithubLoginUrlResponse(BaseModel):
+    login_url: str
+    state: str
+
+
+class GithubAuthCompleteRequest(BaseModel):
+    code: str = Field(..., description="GitHub OAuth authorization code")
+    state: Optional[str] = Field(None, description="State sent during login")
+    user_id: Optional[int] = Field(None, description="Internal user id (demo uses 1)")
+
+
+class GithubAuthCompleteResponse(BaseModel):
+    user_id: int
+    github_login: str
+    github_id: int
+    scope: Optional[str] = None
+
+
+class GithubRepo(BaseModel):
+    id: int
+    full_name: str
+    private: bool
+    description: Optional[str] = None
+    default_branch: Optional[str] = None
+
+
+class GithubReposResponse(BaseModel):
+    repos: List[GithubRepo]
+
+
+class ImportRepoRequest(BaseModel):
+    user_id: int = Field(..., description="Internal user id")
+    repo_full_name: str = Field(..., example="owner/repo")
+    branch: Optional[str] = Field(None, description="Optional branch or tag to import")
+
+
+class ImportRepoResponse(BaseModel):
+    user_id: int
+    repo_full_name: str
+    branch: Optional[str]
+    qdrant_collection: str
+    files_indexed: int
+    chunks_indexed: int

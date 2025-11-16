@@ -4,6 +4,7 @@ import GenerationArea from "./components/GenerationArea";
 import OutputDisplay from "./components/OutputDisplay";
 import HistoryTable from "./components/HistoryTable";
 import CodeAnalyzer from "./components/CodeAnalyzer";
+import GithubIntegration from "./components/GithubIntegration";
 import ChatPage from "./components/ChatPage";
 import { useState } from "react";
 /**
@@ -13,7 +14,7 @@ import { useState } from "react";
  */
 
 function AppShell() {
-  const [tab, setTab] = useState<"generate" | "analyze" | "chat">("generate");
+  const [tab, setTab] = useState<"generate" | "analyze" | "github">("generate");
 
 
   return (
@@ -38,22 +39,20 @@ function AppShell() {
             >
               Code Analyzer
             </button>
-            <button
+             <button
               className={`rounded-2xl px-4 py-2 text-sm ${
-                tab === "chat" ? "bg-blue-600 text-white" : "bg-gray-100"
+                tab === "github" ? "bg-blue-600 text-white" : "bg-gray-100"
               }`}
-              onClick={() => setTab("chat")}
+              onClick={() => setTab("github")}
             >
-              Chat
+              GitHub
             </button>
           </nav>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl p-4">
-        {tab === "chat" ? (
-          <ChatPage />
-        ) : tab === "generate" ? (
+       <main className="mx-auto max-w-6xl p-4">
+        {tab === "generate" ? (
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <GenerationArea />
@@ -63,8 +62,10 @@ function AppShell() {
               <HistoryTable />
             </div>
           </div>
-        ) : (
+        ) : tab === "analyze" ? (
           <CodeAnalyzer />
+        ) : (
+          <GithubIntegration />
         )}
       </main>
     </div>

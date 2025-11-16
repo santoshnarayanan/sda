@@ -1,24 +1,51 @@
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from psycopg2.extras import RealDictCursor
 import psycopg2
+from psycopg2.extras import RealDictCursor
 
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, Depends, Query
+from fastapi.middleware.cors import CORSMiddleware
+
+from dotenv import load_dotenv
+
+# Models (Pydantic)
 from .models import (
     CodeGenerationRequest, GenerationResponse,
     HistoryResponse, HistoryEntry,
     DocQARequest, IngestRequest, CodeRefactorRequest,
     ProjectUploadResponse, AnalyzeProjectRequest, AnalyzeProjectResponse,
-    ReviewCodeRequest, ReviewCodeResponse
+    ReviewCodeRequest, ReviewCodeResponse,
+    GithubLoginUrlResponse, GithubAuthCompleteRequest,
+    GithubReposResponse, ImportRepoRequest, ImportRepoResponse,
+    GithubAuthCompleteResponse, GithubRepo,
 )
-from .ai_service import generate_content_with_llm, answer_from_docs, refactor_code_with_llm, analyze_project_structure, review_code_snippet
-# import from sibling package (adjust if your layout differs)
-from ingest import upsert_documents
+
+# Internal modules
+from .ai_service import (
+    generate_content_with_llm,
+    answer_from_docs,
+    refactor_code_with_llm,
+    analyze_project_structure,
+    review_code_snippet,
+)
+
 from .project_ingest import ingest_project_zip
 from .speech_service import router as speech_router
-from .api import chat,snippets,settings
-from dotenv import load_dotenv
+
+from .github_oauth import (
+    build_github_login_url,
+    exchange_code_for_token,
+    get_github_user,
+    list_repos,
+    download_repo_zip,
+    GithubOAuthError,
+)
+
+from .api import snippets, settings
+
+from ingest import upsert_documents
+
 load_dotenv()
+
 
 
 # --- Config ---
@@ -44,7 +71,6 @@ app.add_middleware(
 )
 
 app.include_router(speech_router)
-app.include_router(chat.router)
 app.include_router(snippets.router)
 app.include_router(settings.router)
 
@@ -121,6 +147,49 @@ def require_internal_key(x_internal_key: str = Header(...)):
         raise HTTPException(status_code=401, detail="Invalid X-Internal-Key")
     return True
 
+def ensure_github_accounts_table(conn):
+    """
+    Create github_accounts table if it does not exist.
+    Stores GitHub OAuth access tokens per internal user.
+    """
+    cur = conn.cursor()
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS github_accounts (
+            id SERIAL PRIMARY KEY,
+            user_id INT NOT NULL,
+            github_id BIGINT,
+            github_login TEXT,
+            access_token TEXT NOT NULL,
+            token_type TEXT,
+            scope TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+    )
+    conn.commit()
+    
+def get_github_access_token_for_user(user_id: int) -> str:
+    conn = get_db_connection()
+    ensure_github_accounts_table(conn)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT access_token FROM github_accounts WHERE user_id = %s ORDER BY id DESC LIMIT 1",
+            (user_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=400, detail="No GitHub account connected for this user")
+        return row[0]
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+
 
 @app.post("/api/v1/upload_docs", dependencies=[Depends(require_internal_key)], status_code=200)
 async def upload_docs_api(payload: IngestRequest):
@@ -164,6 +233,42 @@ async def get_history():
             conn.close()
         except Exception:
             pass
+
+
+@app.post("/api/chat")
+async def chat_api(payload: dict):
+    """
+    Minimal chat endpoint for Phase 5.
+    Stores chat history, returns LLM response.
+    """
+    user_id = payload.get("user_id", TEST_USER_ID)
+    message = payload.get("message", "")
+    session_id = payload.get("session_id", "default")
+
+    if not message.strip():
+        raise HTTPException(status_code=400, detail="Message required")
+
+    # Generate LLM response
+    response = generate_content_with_llm(prompt=message, language="markdown")
+
+    # Store chat history
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO chat_history (user_id, session_id, user_message, ai_response)
+            VALUES (%s, %s, %s, %s)
+        """, (user_id, session_id, message, response.generated_content))
+        conn.commit()
+    except Exception as e:
+        print("[CHAT] Failed to save:", e)
+    finally:
+        try:
+            conn.close()
+        except:
+            pass
+
+    return {"response": response.generated_content}
 
 
 # --- Phase 3 ---
@@ -280,3 +385,172 @@ async def review_code(req: ReviewCodeRequest):
         ruleset=req.ruleset or "default",
         review_markdown=review,
     )
+
+@app.get("/api/v1/auth/github/login_url", response_model=GithubLoginUrlResponse)
+async def github_login_url(state: str = Query("sda-demo", description="Opaque state for CSRF protection")):
+    """
+    Returns the GitHub OAuth login URL that the frontend should redirect the user to.
+    """
+    try:
+        url = build_github_login_url(state)
+        return GithubLoginUrlResponse(login_url=url, state=state)
+    except GithubOAuthError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/auth/github/complete", response_model=GithubAuthCompleteResponse)
+async def github_auth_complete(payload: GithubAuthCompleteRequest):
+    """
+    Frontend calls this after GitHub redirects back with ?code=...
+    We exchange 'code' for an access token, fetch the GitHub user,
+    and persist the mapping in github_accounts.
+    """
+    user_id = payload.user_id or TEST_USER_ID
+
+    try:
+        token_data = await exchange_code_for_token(payload.code)
+        access_token = token_data.get("access_token")
+        token_type = token_data.get("token_type")
+        scope = token_data.get("scope")
+
+        gh_user = await get_github_user(access_token)
+        github_id = int(gh_user.get("id"))
+        github_login = gh_user.get("login")
+
+        conn = get_db_connection()
+        ensure_github_accounts_table(conn)
+        cur = conn.cursor()
+        # Upsert-like behavior: we keep it simple by deleting any existing record
+        cur.execute(
+            "DELETE FROM github_accounts WHERE user_id = %s",
+            (user_id,),
+        )
+        cur.execute(
+            """
+            INSERT INTO github_accounts (user_id, github_id, github_login, access_token, token_type, scope)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (user_id, github_id, github_login, access_token, token_type, scope),
+        )
+        conn.commit()
+    except GithubOAuthError as e:
+        raise HTTPException(status_code=400, detail=f"GitHub OAuth failed: {e}")
+    except Exception as e:
+        print(f"[GitHub OAuth] Failed to complete auth: {e}")
+        raise HTTPException(status_code=500, detail="Internal error during GitHub OAuth flow")
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    return GithubAuthCompleteResponse(
+        user_id=user_id,
+        github_login=github_login,
+        github_id=github_id,
+        scope=scope,
+    )
+
+@app.get("/api/v1/github/repos", response_model=GithubReposResponse)
+async def github_list_repos(user_id: int = Query(TEST_USER_ID)):
+    """
+    List GitHub repositories accessible for the authenticated user.
+    Uses the token stored in github_accounts.
+    """
+    token = get_github_access_token_for_user(user_id)
+    try:
+        repos_raw = await list_repos(token)
+    except Exception as e:
+        print(f"[GitHub] Failed to list repos: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list GitHub repos")
+
+    # Map into our Pydantic model
+    repos = []
+    for r in repos_raw:
+        try:
+            repos.append(
+                GithubRepo(
+                    id=r.get("id"),
+                    full_name=r.get("full_name"),
+                    private=bool(r.get("private")),
+                    description=r.get("description"),
+                    default_branch=r.get("default_branch"),
+                )
+            )
+        except Exception:
+            continue
+
+    return GithubReposResponse(repos=repos)
+
+@app.post("/api/v1/import_repo", response_model=ImportRepoResponse)
+async def import_repo(req: ImportRepoRequest):
+    """
+    Downloads a GitHub repo (zipball) for the authenticated user
+    and indexes it into a dedicated Qdrant collection using the existing project_ingest logic.
+    """
+    user_id = req.user_id or TEST_USER_ID
+    token = get_github_access_token_for_user(user_id)
+
+    # Download ZIP from GitHub
+    try:
+        zip_bytes, resolved_ref = await download_repo_zip(
+            token,
+            full_name=req.repo_full_name,
+            ref=req.branch,
+        )
+    except Exception as e:
+        print(f"[GitHub] Failed to download repo zip: {e}")
+        raise HTTPException(status_code=500, detail="Failed to download GitHub repository")
+
+    # Derive a human-friendly project_name from repo_full_name
+    # e.g., owner/repo -> repo
+    project_name = req.repo_full_name.split("/")[-1]
+
+    # Reuse existing ingestion pipeline
+    try:
+        collection_name, files_indexed, chunks_indexed = ingest_project_zip(
+            user_id=user_id,
+            project_name=project_name,
+            file_bytes=zip_bytes,
+        )
+    except Exception as e:
+        print(f"[GitHub] Failed to ingest repo: {e}")
+        raise HTTPException(status_code=500, detail="Failed to ingest repository into Qdrant")
+
+    # Persist mapping into project_collections as Phase 4 already does
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project_collections (
+                id SERIAL PRIMARY KEY,
+                user_id INT NOT NULL,
+                project_name TEXT,
+                qdrant_collection TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            """
+        )
+        cur.execute(
+            "INSERT INTO project_collections (user_id, project_name, qdrant_collection) VALUES (%s, %s, %s)",
+            (user_id, project_name, collection_name),
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"[WARN] Could not persist project mapping (GitHub import): {e}")
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    return ImportRepoResponse(
+        user_id=user_id,
+        repo_full_name=req.repo_full_name,
+        branch=req.branch or resolved_ref,
+        qdrant_collection=collection_name,
+        files_indexed=files_indexed,
+        chunks_indexed=chunks_indexed,
+    )
+

@@ -1,3 +1,0 @@
-{"timestamp":"2025-11-11T10:12:00Z","role":"user","turn":1,"content":"Where do we store code snippets?"}
-{"timestamp":"2025-11-11T10:12:10Z","role":"assistant","turn":2,"content":"In table user_snippets with fields ..."}
-{"timestamp":"2025-11-11T10:13:00Z","role":"user","turn":3,"content":"Great—also, what's the Qdrant collection name?"}

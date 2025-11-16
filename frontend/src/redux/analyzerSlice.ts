@@ -79,7 +79,17 @@ const analyzerSlice = createSlice({
         setCode(state, action: PayloadAction<string>) { state.code = action.payload; },
         resetAnalyzer(state) {
             Object.assign(state, initialState);
-        }
+        },
+        setImportedProject(
+            state,
+            action: PayloadAction<{ collectionName: string; filesIndexed: number; chunksIndexed: number }>
+        ) {
+            state.collectionName = action.payload.collectionName;
+            state.filesIndexed = action.payload.filesIndexed;
+            state.chunksIndexed = action.payload.chunksIndexed;
+            state.uploadStatus = "succeeded";
+            state.uploadError = null;
+        },
     },
     extraReducers: (builder) => {
         // upload
@@ -124,5 +134,5 @@ const analyzerSlice = createSlice({
     },
 });
 
-export const { setFocus, setLanguage, setRuleset, setCode, resetAnalyzer } = analyzerSlice.actions;
+export const { setFocus, setLanguage, setRuleset, setCode, resetAnalyzer, setImportedProject } = analyzerSlice.actions;
 export default analyzerSlice.reducer;

@@ -65,4 +65,70 @@ export async function reviewCode(params: {
     return data;
 }
 
+export type GithubLoginUrlResponse = {
+    login_url: string;
+    state: string;
+};
+
+export type GithubAuthCompleteResponse = {
+    user_id: number;
+    github_login: string;
+    github_id: number;
+    scope?: string | null;
+};
+
+export type GithubRepo = {
+    id: number;
+    full_name: string;
+    private: boolean;
+    description?: string | null;
+    default_branch?: string | null;
+};
+
+export type ImportRepoResponse = {
+    user_id: number;
+    repo_full_name: string;
+    branch: string | null;
+    qdrant_collection: string;
+    files_indexed: number;
+    chunks_indexed: number;
+};
+
+export async function getGithubLoginUrl(): Promise<GithubLoginUrlResponse> {
+    const { data } = await api.get<GithubLoginUrlResponse>("/api/v1/auth/github/login_url");
+    return data;
+}
+
+export async function completeGithubAuth(
+    code: string,
+    state?: string | null,
+    userId: number = 1
+): Promise<GithubAuthCompleteResponse> {
+    const { data } = await api.post<GithubAuthCompleteResponse>("/api/v1/auth/github/complete", {
+        code,
+        state: state ?? null,
+        user_id: userId,
+    });
+    return data;
+}
+
+export async function getGithubRepos(userId: number = 1): Promise<GithubRepo[]> {
+    const { data } = await api.get<{ repos: GithubRepo[] }>("/api/v1/github/repos", {
+        params: { user_id: userId },
+    });
+    return data.repos;
+}
+
+export async function importGithubRepo(
+    params: { userId: number; repoFullName: string; branch?: string | null }
+): Promise<ImportRepoResponse> {
+    const { data } = await api.post<ImportRepoResponse>("/api/v1/import_repo", {
+        user_id: params.userId,
+        repo_full_name: params.repoFullName,
+        branch: params.branch ?? null,
+    });
+    return data;
+}
+
+
 export default api;
