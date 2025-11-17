@@ -1,0 +1,170 @@
+{
+  "info": {
+    "_postman_id": "sda-phase1-5-collection-0001",
+    "name": "SDA – Phase 1–5 (LLM + RAG + Analyzer + Refactor)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Smart Developer Assistant – Postman collection covering Phase 1 to Phase 5 endpoints."
+  },
+  "item": [
+    {
+      "name": "Phase 1 – Generate Code",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"prompt\": \"Write a Python function to reverse a string.\",\n  \"language\": \"python\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/generate",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "v1", "generate" ]
+        }
+      }
+    },
+
+    {
+      "name": "Phase 1 – Text-to-Speech",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"This is a test for speech synthesis.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/speech",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "v1", "speech" ]
+        }
+      }
+    },
+
+    {
+      "name": "Phase 2 – RAG Docs QA",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is LangChain?\",\n  \"collection_name\": \"project_docs\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/docs_qa",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "v1", "docs_qa" ]
+        }
+      }
+    },
+
+    {
+      "name": "Phase 2 – Document Ingestion",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"collection_name\": \"project_docs\",\n  \"text\": \"LangChain is a framework for building LLM applications.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/ingest",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "v1", "ingest" ]
+        }
+      }
+    },
+
+    {
+      "name": "Phase 3 – Code Refactor / Review",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"def add(a,b):return a+b\",\n  \"language\": \"python\",\n  \"ruleset\": \"default\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/review_code",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "v1", "review_code" ]
+        }
+      }
+    },
+
+    {
+      "name": "Phase 4 – Upload Project ZIP",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/upload_project",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "v1", "upload_project" ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "/absolute/path/to/your/project.zip"
+            }
+          ]
+        }
+      }
+    },
+
+    {
+      "name": "Phase 4 – Analyze Project Structure",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"collection_name\": \"project_1_myrepo_1234\",\n  \"focus\": \"architecture\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/analyze_project",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "v1", "analyze_project" ]
+        }
+      }
+    },
+
+    {
+      "name": "Phase 5 – Chat / History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/history?user_id=1",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "api", "v1", "history" ],
+          "query": [
+            { "key": "user_id", "value": "1" }
+          ]
+        }
+      }
+    }
+  ],
+
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    }
+  ]
+}

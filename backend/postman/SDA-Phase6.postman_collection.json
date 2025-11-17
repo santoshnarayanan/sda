@@ -1,0 +1,247 @@
+{
+  "info": {
+    "_postman_id": "b1e6f8c8-0000-4000-8000-000000sda6p6",
+    "name": "SDA - Phase 6 (GitHub + Agents)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Smart Developer Assistant - Phase 6 endpoints (GitHub OAuth, Repo Import, Multi-Agent System)."
+  },
+  "item": [
+    {
+      "name": "Auth - GitHub Login URL",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/github/login_url",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "github",
+            "login_url"
+          ]
+        },
+        "description": "Get the GitHub OAuth login URL. Frontend uses this to redirect the user to GitHub."
+      },
+      "response": []
+    },
+    {
+      "name": "Auth - GitHub Complete (exchange code)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"REPLACE_WITH_OAUTH_CODE\",\n  \"state\": \"sda-demo\",\n  \"user_id\": 1\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/github/complete",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "github",
+            "complete"
+          ]
+        },
+        "description": "Complete GitHub OAuth: exchange ?code= for an access token and store it for the given user_id."
+      },
+      "response": []
+    },
+    {
+      "name": "GitHub - List Repositories",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/github/repos?user_id=1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "github",
+            "repos"
+          ],
+          "query": [
+            {
+              "key": "user_id",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "List GitHub repositories for the connected GitHub account of user_id=1."
+      },
+      "response": []
+    },
+    {
+      "name": "GitHub - Import Repository",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": 1,\n  \"repo_full_name\": \"santoshnarayanan/activeloop\", \n  \"branch\": \"master\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/import_repo",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "import_repo"
+          ]
+        },
+        "description": "Import a GitHub repo into Qdrant and PostgreSQL. Returns collection name, files indexed, chunks indexed."
+      },
+      "response": []
+    },
+    {
+      "name": "Agent - Repository Overview",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task_type\": \"repo_overview\",\n  \"collection_name\": \"project_1_activeloop_17633314242\",\n  \"user_query\": \"Give me a high-level overview of this repository.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/agent_run",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "agent_run"
+          ]
+        },
+        "description": "Multi-agent run: Repository overview (Retriever + Analyzer). Change collection_name to your actual Qdrant collection."
+      },
+      "response": []
+    },
+    {
+      "name": "Agent - Analyze Architecture",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task_type\": \"analyze_architecture\",\n  \"collection_name\": \"project_1_activeloop_17633314242\",\n  \"user_query\": \"Explain the architecture and key components of this codebase.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/agent_run",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "agent_run"
+          ]
+        },
+        "description": "Multi-agent run: Architecture analysis (Retriever + Analyzer)."
+      },
+      "response": []
+    },
+    {
+      "name": "Agent - Refactor / Review Code",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task_type\": \"refactor_code\",\n  \"collection_name\": \"project_1_activeloop_17633314242\",\n  \"user_query\": \"Review this function and suggest improvements.\",\n  \"code_snippet\": \"def add(a, b):\\n    return a + b\",\n  \"language\": \"python\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/agent_run",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "agent_run"
+          ]
+        },
+        "description": "Multi-agent run: Code refactor/review (Retriever + Refactor agent)."
+      },
+      "response": []
+    },
+    {
+      "name": "Agent - Generate Deployment Config (DevOps Agent)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"task_type\": \"generate_deployment\",\n  \"collection_name\": \"project_1_activeloop_17633314242\",\n  \"user_query\": \"Generate Dockerfile, Kubernetes manifests, Cloud Run YAML, and a GitHub Actions CI for BOTH: the Python backend and the Node.js frontend.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/agent_run",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "agent_run"
+          ]
+        },
+        "description": "DevOps Agent: generates deployment configs. With Option 3 logic: will handle single runtime, multiple runtimes, and 'both/all' cases."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    }
+  ]
+}
