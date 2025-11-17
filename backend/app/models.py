@@ -233,9 +233,16 @@ class AgentRunRequest(BaseModel):
         description="Programming language for code-related tasks.",
     )
 
+class DeploymentFile(BaseModel):
+    filename: str
+    content: str
 
 class AgentRunResponse(BaseModel):
     task_type: str
     collection_name: Optional[str]
     final_answer_markdown: str
     steps: List[AgentStep]
+    deployment_files: Optional[List[DeploymentFile]] = None
+
+
+

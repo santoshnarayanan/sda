@@ -3,6 +3,7 @@ from typing import Tuple, List
 
 from ..models import AgentRunRequest, AgentStep
 from .tools import retriever_tool, refactor_tool, deployment_tool, reasoning_tool
+from .parser import parse_deployment_artifacts
 
 
 def run_multi_agent_flow(req: AgentRunRequest) -> Tuple[str, List[AgentStep]]:
@@ -16,7 +17,8 @@ def run_multi_agent_flow(req: AgentRunRequest) -> Tuple[str, List[AgentStep]]:
 
     if req.task_type == "analyze_architecture":
         # 1) Retriever Agent gathers architecture context from codebase/repo
-        ctx, tc1 = retriever_tool(req.collection_name, req.user_query or "overall architecture")
+        ctx, tc1 = retriever_tool(
+            req.collection_name, req.user_query or "overall architecture")
         steps.append(
             AgentStep(
                 step_name="Retrieve architecture context",
@@ -46,7 +48,8 @@ Explain key components, data flow, and important patterns.
     elif req.task_type == "refactor_code":
         # 1) Retriever Agent (optional): gather context on project
         if req.collection_name:
-            ctx, tc1 = retriever_tool(req.collection_name, "key modules and patterns")
+            ctx, tc1 = retriever_tool(
+                req.collection_name, "key modules and patterns")
             steps.append(
                 AgentStep(
                     step_name="Retrieve project context",
@@ -74,8 +77,10 @@ Explain key components, data flow, and important patterns.
         return review, steps
 
     elif req.task_type == "generate_deployment":
-        # DevOps Agent: generate deployment artifacts
         deployment_md, tc1 = deployment_tool(req.collection_name, req.user_query)
+
+        deployment_files = parse_deployment_artifacts(deployment_md)
+
         steps.append(
             AgentStep(
                 step_name="Generate deployment artifacts",
@@ -84,11 +89,14 @@ Explain key components, data flow, and important patterns.
                 tool_calls=[tc1],
             )
         )
-        return deployment_md, steps
+
+        # Return both markdown and parsed files
+        return deployment_md, steps, deployment_files
 
     else:  # 'repo_overview' or fallback
         # 1) Retriever Agent: get overview
-        ctx, tc1 = retriever_tool(req.collection_name, req.user_query or "overview")
+        ctx, tc1 = retriever_tool(
+            req.collection_name, req.user_query or "overview")
         steps.append(
             AgentStep(
                 step_name="Retrieve repository overview",
