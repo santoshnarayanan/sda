@@ -148,11 +148,17 @@ export type AgentStep = {
   tool_calls: AgentToolCall[];
 };
 
+export interface DeploymentFile {
+    filename: string;
+    content: string;
+}
+
 export type AgentRunResponse = {
   task_type: string;
   collection_name?: string | null;
   final_answer_markdown: string;
   steps: AgentStep[];
+  deployment_files?: DeploymentFile[];
 };
 
 export async function runAgentTask(params: {

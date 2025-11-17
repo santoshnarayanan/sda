@@ -17,6 +17,9 @@ export default function AgentWorkspace() {
   const [steps, setSteps] = useState<AgentStep[]>([]);
   const [finalAnswer, setFinalAnswer] = useState("");
 
+  const [deploymentFiles, setDeploymentFiles] = useState<any[]>([]);
+  const [activeFileIndex, setActiveFileIndex] = useState<number>(0);
+
   // Use the current analyzer collection, if any (GitHub import or upload)
   const activeCollection = useSelector(
     (state: RootState) => state.analyzer.collectionName
@@ -37,6 +40,14 @@ export default function AgentWorkspace() {
         language,
       });
 
+      if (resp.deployment_files) {
+        setDeploymentFiles(resp.deployment_files);
+        setActiveFileIndex(0);
+      } else {
+        setDeploymentFiles([]);
+      }
+
+
       setSteps(resp.steps);
       setFinalAnswer(resp.final_answer_markdown);
     } catch (e: any) {
@@ -46,6 +57,30 @@ export default function AgentWorkspace() {
       setLoading(false);
     }
   };
+
+  const downloadZipBundle = async () => {
+    if (!deploymentFiles || deploymentFiles.length === 0) {
+      alert("No deployment files to export.");
+      return;
+    }
+
+    const resp = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/export_deployment_bundle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(deploymentFiles),
+    });
+
+    const blob = await resp.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "deployment_bundle.zip";
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+  };
+
 
   const showCodeInput = taskType === "refactor_code";
 
@@ -211,6 +246,43 @@ export default function AgentWorkspace() {
           </p>
         )}
       </section>
+
+      {/* UI Viewer Section */}
+      {deploymentFiles.length > 0 && (
+        <div className="mt-10 p-4 border rounded-xl bg-white shadow-sm">
+          <h2 className="text-lg font-bold mb-4">4. Deployment Artifacts</h2>
+
+          {/* Tab Buttons */}
+          <div className="flex space-x-2 mb-4 overflow-x-auto">
+            {deploymentFiles.map((file, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveFileIndex(idx)}
+                className={`px-3 py-1 rounded-xl text-sm ${idx === activeFileIndex
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700"
+                  }`}
+              >
+                {file.filename}
+              </button>
+            ))}
+          </div>
+
+          {/* Code Viewer */}
+          <pre className="p-4 bg-gray-900 text-white rounded-xl overflow-auto text-sm whitespace-pre-wrap">
+            {deploymentFiles[activeFileIndex]?.content}
+          </pre>
+
+          {/* Download ZIP */}
+          <button
+            onClick={downloadZipBundle}
+            className="mt-4 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700"
+          >
+            Download All as ZIP
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }
