@@ -293,12 +293,21 @@ def refactor_code_with_llm(code: str, language: str) -> GenerationResponse:
         request_type="code_refactor"
     )
 
-
 def _make_vector_store_for_collection(collection_name: str) -> Qdrant:
-    from langchain_community.embeddings import SentenceTransformerEmbeddings
-    embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+    """
+    Create a Qdrant vector store for an arbitrary collection.
+    Uses OpenAIEmbeddings (cloud-safe) instead of SentenceTransformer.
+    """
+    embeddings = OpenAIEmbeddings()
+
     client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-    return Qdrant(client=client, collection_name=collection_name, embeddings=embeddings, content_payload_key="text")
+    return Qdrant(
+        client=client,
+        collection_name=collection_name,
+        embeddings=embeddings,
+        content_payload_key="text",
+    )
+
 
 
 def analyze_project_structure(collection_name: str, focus: str | None = None) -> str:
