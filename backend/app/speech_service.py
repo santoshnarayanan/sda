@@ -2,7 +2,7 @@
 import os
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from openai import OpenAI
-
+ 
 router = APIRouter()
 
 # Determine whether Whisper should run from Cloud Run
