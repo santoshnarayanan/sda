@@ -12,34 +12,20 @@ dependencies = [
     "psycopg2-binary",
     "sqlmodel",
     "qdrant-client",
-    "sentence-transformers",
     "rank-bm25",
     "rapidfuzz",
     "uvicorn[standard]",
-    "pillow",
     "python-multipart",
-    "langchainhub",
-    "langchain-experimental",
-    "openai-whisper",
+
     "langchain",
     "langchain-community",
     "langchain-openai",
     "langchain-text-splitters",
+
     "httpx",
     "requests",
-    "numpy",
-    "scipy",
-    "scikit-learn",
-    "torch",
-    "transformers",
-    "tiktoken",
-    "huggingface-hub",
-    "anyio",
-    "click",
-    "jinja2",
-    "packaging",
-    "jupyter>=1.1.1",
 ]
+
 
 [tool.setuptools.packages.find]
 where = ["app"]

@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 # LangChain / Retrieval
 from qdrant_client import QdrantClient
 from langchain_community.vectorstores import Qdrant
-from langchain_community.embeddings import SentenceTransformerEmbeddings
+# from langchain_community.embeddings import SentenceTransformerEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -59,7 +60,8 @@ except Exception:
     llm = None
     print("Warning: OpenAI API key not found. Using mock LLM response.")
 
-embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+# embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = OpenAIEmbeddings()
 qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 vector_store = Qdrant(
     client=qdrant_client,
