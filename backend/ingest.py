@@ -6,20 +6,19 @@ from typing import Iterable, Optional, Dict, Any, List
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, VectorParams, Filter, FieldCondition, MatchValue
-from sentence_transformers import SentenceTransformer
+from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
 
 # --- Env ---
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")  # not required for ingestion
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
 COLLECTION_NAME = os.environ.get("QDRANT_COLLECTION", "sda_dev_documentation")
 DEFAULT_DOCS_PATH = os.environ.get("DOCS_PATH", "docs")
-EMBED_MODEL = os.environ.get("EMBED_MODEL", "all-MiniLM-L6-v2")
 
-# --- Clients / Models ---
+# --- Clients ---
 client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
 def ensure_collection(collection_name: str, vector_size: int, recreate: bool = False) -> None:
@@ -29,7 +28,6 @@ def ensure_collection(collection_name: str, vector_size: int, recreate: bool = F
             vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
         )
         return
-    # idempotent create
     try:
         client.get_collection(collection_name=collection_name)
     except Exception:
@@ -68,13 +66,15 @@ def build_payload(base: Dict[str, Any], chunk_text: str, chunk_id: int, tags: Op
 def upsert_documents(
     docs: Iterable[Dict[str, Any]],
     collection_name: str = COLLECTION_NAME,
-    embed_model_name: str = EMBED_MODEL,
     recreate: bool = False,
     default_tags: Optional[Dict[str, Any]] = None,
 ) -> int:
     """Upsert (no destructive recreate unless explicitly requested). Returns total points indexed."""
-    model = SentenceTransformer(embed_model_name)
-    vector_size = model.get_sentence_embedding_dimension()
+
+    embeddings = OpenAIEmbeddings()
+
+    # Probe vector dimension
+    vector_size = len(embeddings.embed_query("dimension probe"))
 
     ensure_collection(collection_name, vector_size, recreate)
 
@@ -82,16 +82,17 @@ def upsert_documents(
     pid = 0
     for doc in docs:
         chunks = chunk_text(doc["text"])
-        vectors = model.encode(chunks).tolist()
-        for i, ch in enumerate(chunks):
-            points.append(
-                models.PointStruct(
-                    id=None,  # let Qdrant assign
-                    vector=vectors[i],
-                    payload=build_payload(doc, ch, i, tags=default_tags),
+        if chunks:
+            vectors = embeddings.embed_documents(chunks)
+            for i, ch in enumerate(chunks):
+                points.append(
+                    models.PointStruct(
+                        id=None,
+                        vector=vectors[i],
+                        payload=build_payload(doc, ch, i, tags=default_tags),
+                    )
                 )
-            )
-            pid += 1
+                pid += 1
 
     if points:
         client.upsert(collection_name=collection_name, wait=True, points=points)
