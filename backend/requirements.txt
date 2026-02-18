@@ -1,2 +1,26 @@
-# Development dependencies for running and testing the application
+fastapi
 uvicorn[standard]
+
+sqlalchemy
+psycopg2-binary
+python-dotenv
+python-multipart
+
+pydantic
+
+qdrant-client
+rank-bm25
+rapidfuzz
+sentence-transformers
+
+openai
+tiktoken
+openai-whisper
+
+langchain
+langchain-core
+langchain-community
+langchain-openai
+
+httpx
+requests
