@@ -129,6 +129,11 @@ Your responsibilities:
    - At the end of your answer, add a short "Validation & Notes" section.
    - List any assumptions you made (e.g., port numbers, image names, env vars).
    - Mention any TODOs the user must fill in (like real domain names, secrets, etc.).
+
+   IMPORTANT:
+You MUST wrap every file in a fenced code block.
+Do NOT output raw text files without triple backticks.
+If you do not use fenced code blocks, the system will fail.
     """.strip()
 
     # Build the prompt with the user request
