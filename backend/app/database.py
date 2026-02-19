@@ -2,7 +2,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# SQLALCHEMY_DATABASE_URL = "postgresql://postgres:atos@123@localhost/sda_dev_db"
 SQLALCHEMY_DATABASE_URL = "postgresql://postgres:atos%40123@localhost/sda_dev_db"
 
 
