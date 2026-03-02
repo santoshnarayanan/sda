@@ -1,97 +1,64 @@
-# 📘 Technical Design — Smart Developer Assistant (SDA)
-## Phase 4: Multimodal + Project Analyzer Integration
+# 1️⃣ Introduction
+Phase 6 extends the Smart Developer Assistant (SDA) into three major capabilities:
+
+- **Part 1 — GitHub Integration:**  
+  Secure OAuth login, repository retrieval, ZIP ingestion, and automated embedding into Qdrant.
+
+- **Part 2 — Multi-Agent System:**  
+  A coordinated architecture of Retriever, Analyzer, Refactor, and DevOps agents orchestrated through a unified Agent Manager.
+
+- **Part 3 — Deployment Artifact Pipeline:**  
+  DevOps agent generates deployment YAMLs/Dockerfiles → parser extracts artifacts → user downloads as a ZIP bundle.
+
+This document describes the technical design and implementation details for all three parts.
 
 ---
 
-## 1️⃣ Introduction
-This document outlines the technical design and implementation details for **Phase 4** of the **Smart Developer Assistant (SDA)** — aligned with the IBM course  
-**“Build Multimodal Generative AI Applications.”**
+# 2️⃣ System Overview (Phase 6)
 
-The goal of this phase is to extend SDA beyond simple prompt-based or RAG-based responses to perform **project-level codebase analysis**, **architectural summarization**, and **code reviews** using multimodal input (text, code, and optional speech).
-
----
-
-## 2️⃣ System Overview
-SDA now supports **multimodal project ingestion** and **intelligent code analysis**.
-
-### 🏗️ System Architecture
-
-![Architecture Phase 4](./images/Architecture_Phase4.png)
-
-#### Key Components
-- **Frontend (React + Redux + Tailwind)**
-  - Adds new **Code Analyzer** module.
-  - Supports file uploads, progress feedback, and markdown-style summaries.
-- **Backend (FastAPI + LangChain + Qdrant)**
-  - Handles project ZIP uploads, embedding ingestion, and retrieval-based analysis.
-- **Databases**
-  - **Qdrant** → Stores vector embeddings for each uploaded project.
-  - **PostgreSQL** → Tracks `project_collections` metadata (project ↔ user).
-- **LLM Integration**
-  - Generates summaries, reviews, and refactoring suggestions using LangChain pipelines.
+## 🏗️ High-Level Architecture  
+**(PLACEHOLDER — Architecture_Phase6.png)**  
+Place your generated diagram in the `./images` folder and reference it as:  
+`![Architecture Phase 6](./images/Architecture_Phase6.png)`
 
 ---
 
-## 3️⃣ Backend Implementation
+# 3️⃣ Phase 6 — Part 1: GitHub Integration
 
-### 🔹 New Files and Endpoints
-#### 📄 `project_ingest.py`
-Handles unzipping, parsing, embedding, and indexing of uploaded project ZIPs.
+## 🔹 Overview
+Part 1 enables SDA users to connect GitHub accounts, browse repositories, and import any repo directly for analysis.
 
-#### 📄 `ai_service.py`
-Added two new analysis methods:
-- `analyze_project_structure()` → Creates architecture summaries from Qdrant context.
-- `review_code_snippet()` → Performs code reviews with style/security recommendations.
+## 🔹 Architecture  
+**(PLACEHOLDER — Architecture_Phase6_Part1.png)**  
 
-#### 📄 `main.py`
-Exposes new API endpoints:
+## 🔹 Components
 
-| Endpoint | Purpose |
-|-----------|----------|
-| `POST /api/v1/upload_project` | Upload and index a zipped project. |
-| `POST /api/v1/analyze_project` | Generate an architectural summary. |
-| `POST /api/v1/review_code` | Perform a code quality and security review. |
+### Frontend
+- `GithubIntegration.tsx`
+- OAuth redirect handler
+- Load repositories
+- Import repository ZIP
 
----
+### Backend
+- OAuth endpoints:  
+  - `/api/v1/auth/github/login_url`  
+  - `/api/v1/auth/github/complete`
+- Repo listing endpoint:
+  - `/api/v1/github/repos`
+- Repo import and ingestion endpoint:
+  - `/api/v1/import_repo`
 
-### ⚙️ Backend Architecture
+### Databases
+- PostgreSQL table: `github_accounts`
+- Qdrant: Project-level collection created automatically per imported repo
 
-![Backend Phase 4](./images/Backend_Phase4.png)
+### Process Flow
+1. User clicks **Connect GitHub**
+2. OAuth login initiated
+3. Access token stored in PostgreSQL
+4. Repo list fetched
+5. ZIP download & ingestion
+6. Collection created in Qdrant
 
-#### Process Overview
-1. **Upload ZIP → FastAPI**
-2. **Extract + Split + Embed → Qdrant**
-3. **Store collection metadata → PostgreSQL**
-4. **LLM (via LangChain)** performs:
-   - Summarization of modules, dependencies, and entry points  
-   - Review of code based on selected language and ruleset
-
----
-
-## 4️⃣ Database Design
-
-A new table `project_collections` has been introduced to track indexed projects.
-
-```sql
-CREATE TABLE project_collections (
-    id SERIAL PRIMARY KEY,
-    user_id INT NOT NULL,
-    project_name TEXT,
-    qdrant_collection TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-```
-![ER Phase 4](./images/ER_Phase4.png)
-```
-
-###  Request Response
-
-```
-![Request response Diagram](./images/Request-response_Phase4.png)
-```
-
-### Sequence Diagram 
-```
-![Sequence Diagram](./images/Sequence_Phase4.png)
-```
+## 🔹 Sequence Diagram  
+**(PLACEHOLDER — Sequence_Phase6_Part1.png)**
