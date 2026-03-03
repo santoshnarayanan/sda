@@ -1,4 +1,5 @@
 import os
+import uuid
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
@@ -407,7 +408,21 @@ async def agent_run(req: AgentRunRequest):
       - 'generate_deployment'
       - 'repo_overview'
     """
+    task_id = str(uuid.uuid4())
+    conn =None
+
     try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+         # 1️⃣ Insert initial row (queued)
+        cur.execute("""
+            INSERT INTO agent_tasks (task_id, task_type, status, created_at, updated_at)
+            VALUES (%s, %s, %s, NOW(), NOW())
+        """, (task_id, req.task_type, "running"))
+
+        conn.commit()
+        
+        
         # For now we trust req.collection_name is correct if provided.
         result = run_agent_task(req)
         return result

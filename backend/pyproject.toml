@@ -39,6 +39,7 @@ dependencies = [
     "jinja2",
     "packaging",
     "jupyter>=1.1.1",
+    "pika",
 ]
 
 [tool.setuptools.packages.find]
