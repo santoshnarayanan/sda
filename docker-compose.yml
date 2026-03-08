@@ -1,4 +1,3 @@
-version: "3.9"
 
 services:
   rabbitmq:
@@ -14,5 +13,30 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     restart: always
 
+  postgres:
+    image: postgres:15
+    container_name: sda-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: atos123
+      POSTGRES_DB: sda_dev_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  api:
+    build: ./backend
+    container_name: sda-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+      - postgres
+    env_file:
+      - ./backend/.env
+
 volumes:
   rabbitmq_data:
+  postgres_data:

@@ -1,27 +1,36 @@
 import os
-import pika
 import json
+import pika
 
-RABBITMQ_URL = os.getenv('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672/%2F')
+from dotenv import load_dotenv
 
-QUEUE_NAME = 'sda_agent_tasks'
+load_dotenv(override=True)
 
-def get_connection():
-    parms = pika.URLParameters(RABBITMQ_URL)
-    return pika.BlockingConnection(parms)
+RABBITMQ_URL = os.getenv(
+    "RABBITMQ_URL",
+    "amqp://sda:sda123@127.0.0.1:5672/%2F"
+)
 
-def publish_task(task:dict):
-    connection = get_connection()
+QUEUE_NAME = "sda_agent_tasks"
+
+
+def publish_task(task: dict):
+    print("Connecting to RabbitMQ:", RABBITMQ_URL)
+
+    parameters = pika.URLParameters(RABBITMQ_URL)
+    connection = pika.BlockingConnection(parameters)
+
     channel = connection.channel()
 
     channel.queue_declare(queue=QUEUE_NAME, durable=True)
 
     channel.basic_publish(
-        exchange='',
+        exchange="",
         routing_key=QUEUE_NAME,
         body=json.dumps(task),
-        properties=pika.BasicProperties(
-            delivery_mode=2,  # make message persistent
-        ))
-    print(f" [x] Sent task: {task}")
+        properties=pika.BasicProperties(delivery_mode=2),
+    )
+
     connection.close()
+
+    print("Task published successfully.")

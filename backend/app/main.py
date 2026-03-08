@@ -1,12 +1,17 @@
 import os
 import uuid
+import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Header, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.messaging.rabbitmq import publish_task
+# from app.database import get_db_connection
+
 from dotenv import load_dotenv
+load_dotenv()
 
 # Models (Pydantic)
 from .models import (
@@ -623,3 +628,72 @@ async def export_deployment_bundle(files: List[DeploymentFile]):
         }
     )
 
+# ***Async operation for RabbitMQ***
+
+@app.post("/api/v1/agent_run_async")
+async def agent_run_async(req: AgentRunRequest):
+    """
+    Async version of agent execution.
+    Instead of running immediately, it pushes the task to RabbitMQ.
+    """
+
+    try:
+        task_id = str(uuid.uuid4())
+        conn = get_db_connection()
+        cur = conn.cursor()
+        #Insert task into db
+        cur.execute("""
+            INSERT INTO agent_tasks (task_id, task_type, status, created_at)
+            VALUES (%s, %s, %s, NOW())
+        """, (task_id, req.task_type, "queued"))
+
+        conn.commit()
+
+        #Publish task to RabbitMQ
+        publish_task(
+            {
+                "task_id": task_id,
+                "request": req.dict(),
+            }
+        )
+
+        cur.close()
+        conn.close()
+       
+        return {
+            "task_id": task_id,
+            "status": "queued",
+        }
+        
+    except Exception as e:
+        print(f"[AgentRunAsync] Failed to publish task: {e}")
+        raise HTTPException(status_code=500, detail="Failed to queue agent task")
+
+
+@app.get("/api/v1/agent_status/{task_id}")
+async def agent_status(task_id: str):
+    """
+    Returns current status of an async agent task.
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "SELECT status, result  FROM agent_tasks WHERE task_id = %s",
+            (task_id,),
+        )
+        result = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+        if not result:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        return {"task_id": task_id, "status": result[0], "result": result[1]}
+    except Exception as e:
+        print(f"[AgentTaskStatus] Failed to retrieve task status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve task status")
+    finally:
+        cur.close()
+        conn.close()

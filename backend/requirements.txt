@@ -8,6 +8,8 @@ python-multipart
 
 pydantic
 
+pika==1.3.2
+
 qdrant-client==1.7.3
 rank-bm25
 rapidfuzz

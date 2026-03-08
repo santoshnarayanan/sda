@@ -27,7 +27,7 @@ def callback(ch, method, properties, body):
         req = AgentRunRequest(**request_payload)
         result = run_agent_task(req)
 
-        cur.execute("UPDATE agent_tasks SET status = 'completed', result = %s WHERE task_id = %s", (json.dumps(result), task_id))
+        cur.execute("UPDATE agent_tasks SET status = 'completed', result = %s WHERE task_id = %s", (json.dumps(result.model_dump(mode="json")), task_id))
         conn.commit()
     except Exception as e:
         print(f"Error processing task {task_id}: {e}")
