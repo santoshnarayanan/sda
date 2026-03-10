@@ -1,62 +1,81 @@
-✅ Step 1 — Go to Backend Folder
+# Backend deployment fastapi code
+
+## Step 1 — Go to Backend Folder
+
+```bash
 cd C:\Projects\langchain\sda\backend
+```
 
-✅ Step 2 — Check If .venv Exists
+## Step 2 — Check If .venv Exists
+
+```bash
 dir
+```
 
+- You should see:
 
-You should see:
-
+```bash
 .venv
+```
 
+- If you don’t see .venv, create it first:
 
-If you don’t see .venv, create it first:
-
+```bash
 python -m venv .venv
+```
 
-✅ Step 3 — Activate Virtual Environment (Windows CMD)
+## Step 3 — Activate Virtual Environment (Windows CMD)
+
+```bash
 .venv\Scripts\activate
+```
 
+- After activation, you should see:
 
-After activation, you should see:
-
+```bash
 (.venv) C:\Projects\langchain\sda\backend>
+```
 
+- That means it's active ✅
 
-That means it's active ✅
+- 🟦 If Using PowerShell Instead
 
-🟦 If Using PowerShell Instead
+- Use:
 
-Use:
-
+```bash
 .venv\Scripts\Activate.ps1
+```
 
+- If execution policy blocks it, run once:
 
-If execution policy blocks it, run once:
-
+```bash
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
 
+- Then try again.
 
-Then try again.
-
-✅ Step 4 — Verify It’s Active
+## Step 4 — Verify It’s Active
 
 Run:
 
-where python
+- where python executable path is
 
+- It should point to:
 
-It should point to:
-
+```bash
 C:\Projects\langchain\sda\backend\.venv\Scripts\python.exe
+```
 
-🚀 After Activation
+- 🚀 After Activation
 
-Install requirements:
+- Install requirements:
 
+```bash
 pip install -r requirements.txt
+```
 
+- Then run backend:
 
-Then run backend:
-
+```bash
 python -m uvicorn app.main:app --reload --port 8000
+```
