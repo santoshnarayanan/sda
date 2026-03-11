@@ -9,7 +9,7 @@ from qdrant_client.http.models import Distance, VectorParams, Filter, FieldCondi
 from sentence_transformers import SentenceTransformer
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-load_dotenv()
+# load_dotenv()
 
 # --- Env ---
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")  # not required for ingestion

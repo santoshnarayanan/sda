@@ -11,7 +11,9 @@ from app.messaging.rabbitmq import publish_task
 # from app.database import get_db_connection
 
 from dotenv import load_dotenv
-load_dotenv()
+# load_dotenv()
+if not os.getenv("DOCKER_ENV"):
+    load_dotenv()
 
 # Models (Pydantic)
 from .models import (
@@ -39,7 +41,7 @@ from .ai_service import (
 )
 
 from .project_ingest import ingest_project_zip
-from .speech_service import router as speech_router
+# from .speech_service import router as speech_router
 
 from .github_oauth import (
     build_github_login_url,
@@ -53,8 +55,6 @@ from .github_oauth import (
 from .api import snippets, settings
 
 from ingest import upsert_documents
-
-load_dotenv()
 
 from fastapi.responses import StreamingResponse
 from typing import List
@@ -73,6 +73,9 @@ DB_PASSWORD = os.environ.get("DB_PASSWORD", "atos@123")  # CHANGE IN PROD
 INTERNAL_INGEST_KEY = os.environ.get(
     "INTERNAL_INGEST_KEY", "super-secret-key-dev")
 
+if os.getenv("DOCKER_ENV"):
+    DB_HOST = "postgres"  # Docker service name
+
 app = FastAPI(
     title="Smart Developer Assistant Backend (Phase 2)", version="2.0")
 
@@ -86,7 +89,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(speech_router)
+# app.include_router(speech_router)
 app.include_router(snippets.router)
 app.include_router(settings.router)
 
@@ -97,6 +100,21 @@ def get_db_connection():
         print(f"Database connection failed: {e}")
         raise HTTPException(
             status_code=503, detail="Database service unavailable")
+    
+def ensure_agent_tasks_table(conn):
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS agent_tasks (
+            id SERIAL PRIMARY KEY,
+            task_id TEXT UNIQUE NOT NULL,
+            task_type TEXT NOT NULL,
+            status TEXT NOT NULL,
+            result JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    conn.commit()
 
 # --- Phase 1 endpoint (kept) ---
 
@@ -418,6 +436,7 @@ async def agent_run(req: AgentRunRequest):
 
     try:
         conn = get_db_connection()
+        ensure_agent_tasks_table(conn)
         cur = conn.cursor()
          # 1️⃣ Insert initial row (queued)
         cur.execute("""
@@ -640,6 +659,7 @@ async def agent_run_async(req: AgentRunRequest):
     try:
         task_id = str(uuid.uuid4())
         conn = get_db_connection()
+        ensure_agent_tasks_table(conn)
         cur = conn.cursor()
         #Insert task into db
         cur.execute("""

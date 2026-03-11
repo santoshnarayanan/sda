@@ -1,15 +1,25 @@
 import tempfile
 import os
-import whisper
 from fastapi import APIRouter, UploadFile, File
 
 router = APIRouter()
-model = whisper.load_model("base")
+
+model = None
+
+try:
+    import whisper
+    model = whisper.load_model("base")
+except Exception as e:
+    print("Whisper disabled:", e)
+
 
 @router.post("/api/v1/transcribe_audio")
 async def transcribe_audio(file: UploadFile = File(...)):
+
+    if model is None:
+        return {"error": "Speech service disabled"}
+
     try:
-        # Create proper temp file for Windows
         with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
             contents = await file.read()
             tmp.write(contents)
@@ -17,7 +27,6 @@ async def transcribe_audio(file: UploadFile = File(...)):
 
         result = model.transcribe(tmp_path)
 
-        # Clean up file
         os.remove(tmp_path)
 
         return {"text": result["text"]}

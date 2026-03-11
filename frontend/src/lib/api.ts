@@ -3,12 +3,21 @@ import axios from "axios";
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
+// ---------------- Phase 6 Part 2 – Agentic AI ----------------
 
+/*
+    * Creates an Axios instance for making API requests to the backend.
+    * The baseURL is set based on the environment variable VITE_BACKEND_URL or defaults to "http://localhost:8000".s
+*/
 const api = axios.create({
     baseURL: BASE_URL,
 });
 
-
+/*
+    * Upload a project file to the server for processing and indexing.
+        * @param params - An object containing the user ID, project name, and file to be uploaded.
+        * @return The response from the server, including details about the uploaded project and indexing results.  
+*/
 export type UploadResponse = {
     user_id: number;
     project_name: string;
@@ -35,6 +44,11 @@ export async function uploadProject(params: {
     return data;
 }
 
+/*
+    * Analyze a project based on its indexed data and return a summary in markdown format.
+        * @param params - An object containing the collection name of the indexed project and an optional focus area for the analysis.
+        * @return The response from the server, including the collection name, focus (if provided), and a summary of the project in markdown format.  
+*/
 
 export async function analyzeProject(params: {
     collectionName: string;

@@ -14,6 +14,13 @@ import { useState } from "react";
  * touch the Redux slice. If present, we render that output above the standard OutputDisplay.
  */
 
+
+/*
+    * The AppShell component manages the main layout and tab navigation of the application.
+        * It uses local state to track which tab is currently active and conditionally renders the appropriate components based on the selected tab.
+        * Example usage:
+        * <AppShell />
+*/
 function AppShell() {
   // const [tab, setTab] = useState<"generate" | "analyze" | "github">("generate");
   const [tab, setTab] = useState<"generate" | "analyze" | "github" | "agent">("generate");

@@ -11,9 +11,6 @@ load_dotenv()
 GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
 GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
 
-print("CLIENT ID:", repr(GITHUB_CLIENT_ID))
-print("CLIENT SECRET:", repr(GITHUB_CLIENT_SECRET))
-
 # Redirect back to SPA root by default (React)
 GITHUB_REDIRECT_URI = os.environ.get("GITHUB_REDIRECT_URI", "http://localhost:5173/")
 GITHUB_OAUTH_SCOPE = os.environ.get("GITHUB_OAUTH_SCOPE", "repo")

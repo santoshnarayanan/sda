@@ -4,7 +4,7 @@ import pika
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+# load_dotenv(override=True)
 
 RABBITMQ_URL = os.getenv(
     "RABBITMQ_URL",

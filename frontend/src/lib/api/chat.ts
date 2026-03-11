@@ -1,10 +1,17 @@
 // src/lib/api/chat.ts
 import api from "../api";
 
-/** 
- * Sends a message to the AI chat endpoint.
- * Backend expects: { user_id, message, session_id }
- */
+/*
+    * Send a chat message to the server and receive a response.
+        * @param params - An object containing the user ID, message, and session ID.
+        * @return The response from the server, which may include a reply to the message.
+        * Example usage:
+        * const response = await sendChatMessage({
+        *   userId: 1,
+        *   message: "Hello, how are you?",
+        *   sessionId: "abc123"
+        * });
+*/
 export async function sendChatMessage(params: {
   userId: number;
   message: string;

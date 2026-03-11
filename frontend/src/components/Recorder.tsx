@@ -6,6 +6,15 @@ export default function VoiceRecorder({ onTranscribed }: { onTranscribed: (t: st
   const [recording, setRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+/*
+    * The VoiceRecorder component allows users to record audio through their microphone, transcribe it using the backend API, and return the transcribed text.
+        * It uses the MediaRecorder API to capture audio and sends the recorded audio file to the backend for transcription when recording stops.
+        * The transcribed text is then passed to the parent component through the onTranscribed callback.
+        * Example usage:
+        * <VoiceRecorder onTranscribed={(text) => console.log("Transcribed text:", text)} />
+
+*/
+
 
   const startRecording = async () => {
     try {
@@ -47,6 +56,14 @@ export default function VoiceRecorder({ onTranscribed }: { onTranscribed: (t: st
     }
   };
 
+  /*
+    * Stop the audio recording and trigger the transcription process.
+        * This function checks if the MediaRecorder is active, stops it, and then processes the recorded audio data to send it to the backend for transcription.
+        * It also handles stopping the media stream tracks to release the microphone resource.
+        * Example usage:
+        * // This function is typically called when the user clicks a "Stop Recording" button.
+        * stopRecording();
+  */
   const stopRecording = () => {
     const recorder = mediaRecorderRef.current;
     if (recorder && recorder.state !== "inactive") {

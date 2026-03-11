@@ -17,7 +17,7 @@ from rapidfuzz.fuzz import partial_ratio
 
 from .models import GenerationResponse, SourceChunk, DocQARequest
 
-load_dotenv()
+# load_dotenv()
 
 # --- File type categories ---
 CODE_EXTS = {".py", ".js", ".ts", ".tsx", ".jsx"}

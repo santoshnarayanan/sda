@@ -36,6 +36,21 @@ services:
       - postgres
     env_file:
       - ./backend/.env
+    environment:
+      DOCKER_ENV: "true"
+      DB_HOST: postgres
+
+  worker:
+    build: ./backend
+    container_name: sda-worker
+    command: python worker.py
+    env_file:
+      - ./backend/.env
+    environment:
+      DOCKER_ENV: "true"
+    depends_on:
+      - postgres
+      - rabbitmq
 
 volumes:
   rabbitmq_data:
