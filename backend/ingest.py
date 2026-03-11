@@ -1,5 +1,10 @@
 # backend/ingest.py
 
+# Simple script to ingest project documentation into Qdrant vector database.
+# It reads text and markdown files from a specified directory, chunks them, generates embeddings using a
+# SentenceTransformer model, and upserts them into a Qdrant collection with metadata.
+# This is manual ingestion to test the retrieval and agent capabilities without needing to upload a full repo or trigger via API.
+
 import os
 from typing import Iterable, Optional, Dict, Any, List
 

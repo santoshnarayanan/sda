@@ -19,6 +19,8 @@ class DocQARequest(BaseModel):
     rerank: bool = Field(True, description="Apply simple cross/heuristic re-ranking")
     filters: Optional[Dict[str, Any]] = Field(None, description="e.g. {'source': 'api_service.txt'}")
     content_language: str = Field("markdown", example="markdown")
+    # optional field
+    collection_name: Optional[str] = None
 
 class IngestRequest(BaseModel):
     # either raw text or base64/bytes in a future rev; keeping simple for Phase 2

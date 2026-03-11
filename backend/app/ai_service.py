@@ -26,7 +26,7 @@ DOC_EXTS  = {".md", ".txt"}
 # --- Config ---
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://localhost:6333")
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
-COLLECTION_NAME = os.environ.get("QDRANT_COLLECTION", "sda_dev_documentation")
+COLLECTION_NAME = os.environ.get("QDRANT_COLLECTION", "project_1_mapflow_1773266984")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 SYSTEM_PROMPT = """
@@ -61,13 +61,23 @@ except Exception:
 
 embeddings = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 qdrant_client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-vector_store = Qdrant(
-    client=qdrant_client,
-    collection_name=COLLECTION_NAME,
-    embeddings=embeddings,
-    content_payload_key="text",
-)
 
+# Will be removed as hardercoded collection names are phased out in favor of dynamic per-project collections.
+# vector_store = Qdrant(
+#     client=qdrant_client,
+#     collection_name=COLLECTION_NAME,
+#     embeddings=embeddings,
+#     content_payload_key="text",
+# )
+
+def get_vector_store(collection_name: str):
+    print(f"[RAG] Using Qdrant collection: {collection_name}")
+    return Qdrant(
+        client=qdrant_client,
+        collection_name=collection_name,
+        embeddings=embeddings,
+        content_payload_key="text",
+    )
 
 def _guess_ext_from_source(meta: dict) -> str:
     """Best-effort extension detection from metadata['source']."""
@@ -166,6 +176,8 @@ def answer_from_docs(req: DocQARequest) -> GenerationResponse:
         )
 
     # 1) Dense retrieval from Qdrant
+    collection = getattr(req, "collection_name", None) or COLLECTION_NAME
+    vector_store = get_vector_store(collection)
     retriever = vector_store.as_retriever(
         search_kwargs={"k": req.top_k, **(_apply_filters(req.filters) or {})})
     docs = retriever.invoke(req.prompt_text)
