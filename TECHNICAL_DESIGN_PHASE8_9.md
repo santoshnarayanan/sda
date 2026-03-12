@@ -73,6 +73,8 @@ delegated to worker services through RabbitMQ queues.
 
 # 4. Phase 8 -- Multi‑Agent Architecture
 
+![Multi Agent Archiecture](./images/phase8and9/Multi‑Agent-Architecture.png)
+
 Phase 8 introduces an agent‑based AI orchestration system that allows
 SDA to solve complex developer tasks by coordinating multiple
 specialized agents.
