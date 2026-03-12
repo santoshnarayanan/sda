@@ -69,7 +69,7 @@ TEST_USER_ID = 1  # Phase 1 simplification
 DB_HOST = os.environ.get("DB_HOST", "localhost")
 DB_NAME = os.environ.get("DB_NAME", "sda_dev_db")
 DB_USER = os.environ.get("DB_USER", "postgres")
-DB_PASSWORD = os.environ.get("DB_PASSWORD", "atos@123")  # CHANGE IN PROD
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "atos123")  # CHANGE IN PROD
 INTERNAL_INGEST_KEY = os.environ.get(
     "INTERNAL_INGEST_KEY", "super-secret-key-dev")
 
@@ -95,7 +95,7 @@ app.include_router(settings.router)
 
 def get_db_connection():
     try:
-        return psycopg2.connect(host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASSWORD)
+        return psycopg2.connect(host="postgres", database="sda_dev_db", user="postgres", password="atos123")
     except Exception as e:
         print(f"Database connection failed: {e}")
         raise HTTPException(
@@ -659,16 +659,21 @@ async def agent_run_async(req: AgentRunRequest):
     try:
         task_id = str(uuid.uuid4())
         conn = get_db_connection()
+        print("STEP 2: DB connection created")
         ensure_agent_tasks_table(conn)
+        print("STEP 3: table ensured")
         cur = conn.cursor()
+        print("STEP 4: cursor created")
         #Insert task into db
         cur.execute("""
             INSERT INTO agent_tasks (task_id, task_type, status, created_at)
             VALUES (%s, %s, %s, NOW())
         """, (task_id, req.task_type, "queued"))
+        print("STEP 5: insert executed")
 
         conn.commit()
-
+        print("STEP 6: commit executed")
+        
         #Publish task to RabbitMQ
         publish_task(
             {

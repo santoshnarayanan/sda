@@ -21,7 +21,7 @@ services:
       POSTGRES_PASSWORD: atos123
       POSTGRES_DB: sda_dev_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
