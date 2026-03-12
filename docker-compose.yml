@@ -1,5 +1,7 @@
+version: "3.9"
 
 services:
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: sda-rabbitmq
@@ -12,6 +14,11 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres:
     image: postgres:15
@@ -25,20 +32,28 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   api:
     build: ./backend
     container_name: sda-api
     ports:
       - "8000:8000"
-    depends_on:
-      - rabbitmq
-      - postgres
     env_file:
       - ./backend/.env
     environment:
       DOCKER_ENV: "true"
       DB_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: always
 
   worker:
     build: ./backend
@@ -48,9 +63,13 @@ services:
       - ./backend/.env
     environment:
       DOCKER_ENV: "true"
+      DB_HOST: postgres
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: always
 
 volumes:
   rabbitmq_data:
