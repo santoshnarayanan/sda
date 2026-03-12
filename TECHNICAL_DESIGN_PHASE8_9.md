@@ -58,6 +58,9 @@ architecture
 
 # 3. High Level System Architecture
 
+![System Archiecture](./images/phase8and9/System-Archiecture.png)
+
+
 Components:
 
 Frontend (React) ↓ FastAPI Backend ↓ RabbitMQ Message Broker ↓ Worker
@@ -145,6 +148,8 @@ deployment artifacts) ↓ Final Result Returned
 
 # 6. Phase 9 -- Asynchronous Task Execution
 
+![Async Task Flow](./images/phase8and9/Async-Message-Flow.png)
+
 AI tasks such as:
 
 -   repository analysis
@@ -159,6 +164,8 @@ To support scalability and reliability, Phase 9 introduces
 ------------------------------------------------------------------------
 
 # 7. RabbitMQ Messaging Architecture
+
+![RabbitMQ Archiecture](./images/phase8and9/RabbitMQ-Queue-Archiecture.png)
 
 Queues:
 
@@ -229,6 +236,8 @@ Worker Steps
 5.  Result stored in database
 6.  Frontend retrieves result
 
+![Task Life Cycle](./images/phase8and9/Task-Lifecycle-diagram.png)
+
 ------------------------------------------------------------------------
 
 # 10. System Scalability
@@ -255,6 +264,8 @@ Docker containers:
 
 Frontend Container Backend API Container RabbitMQ Container Worker
 Container PostgreSQL Container Qdrant Cloud
+
+![Deployment Archiecture](./images/phase8and9/deployment-Archiecture.png)
 
 ------------------------------------------------------------------------
 
