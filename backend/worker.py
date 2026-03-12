@@ -1,3 +1,50 @@
+"""
+Implemented a background worker service to process AI agent tasks asynchronously using RabbitMQ.
+
+Key features added:
+
+1. RabbitMQ Worker Integration
+- Added worker.py service that consumes messages from the queue 'sda_agent_tasks'.
+- Uses pika client to establish connection with RabbitMQ.
+- Worker runs continuously and listens for incoming agent task messages.
+
+2. Asynchronous Task Processing
+- Agent tasks are published by the API to RabbitMQ.
+- Worker consumes the message and executes the agent workflow independently from the API.
+- This prevents blocking the API during long-running AI operations.
+
+3. Agent Execution
+- Worker parses message payload into AgentRunRequest.
+- Executes agent logic via run_agent_task() defined in agents.manager.
+- Supports multi-agent workflows including architecture analysis, code review, and deployment generation.
+
+4. Database Status Tracking
+- Worker updates PostgreSQL table `agent_tasks` to track lifecycle of each task.
+- Status transitions:
+  queued → running → completed / failed
+- Stores final agent response in JSON format in the result column.
+
+5. Reliable Message Processing
+- Manual message acknowledgement using basic_ack.
+- Ensures tasks are not lost if worker crashes during execution.
+- RabbitMQ durable queue configuration ensures message persistence.
+
+6. Environment Compatibility
+- Uses load_dotenv() only when running locally.
+- In Docker environments, environment variables are injected via docker-compose.
+
+7. Docker Integration
+- Worker runs as a separate container service.
+- Connects to RabbitMQ and PostgreSQL via Docker network.
+
+This enables scalable microservice architecture where:
+FastAPI handles API requests,
+RabbitMQ acts as message broker,
+Worker containers process AI tasks asynchronously.
+
+This design supports horizontal scaling by adding additional worker instances.
+"""
+
 import os
 import json
 import pika
