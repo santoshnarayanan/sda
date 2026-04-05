@@ -1,0 +1,8 @@
+# Development dependencies for running and testing the application
+uvicorn[standard]
+fastapi
+qdrant-client
+langchain_community
+langchain_openai
+sentence-transformers
+psycopg2
